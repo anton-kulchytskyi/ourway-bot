@@ -30,6 +30,22 @@ def _auth_headers(telegram_id: int) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+async def ensure_token(telegram_id: int) -> bool:
+    """Return True if the user has a valid token.
+
+    If the token is missing (e.g. after a bot restart), try a silent bot_login.
+    This lets returning users keep using the bot without re-running /start.
+    Returns False only when the user is genuinely unregistered.
+    """
+    if get_token(telegram_id):
+        return True
+    result = await bot_login(telegram_id)
+    if result and result.get("access_token"):
+        save_token(telegram_id, result["access_token"])
+        return True
+    return False
+
+
 API_PREFIX = "/api/v1"
 
 

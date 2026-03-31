@@ -28,16 +28,12 @@ class AddTaskStates(StatesGroup):
     waiting_for_space = State()
 
 
-def _require_login(telegram_id: int) -> bool:
-    return api_client.get_token(telegram_id) is None
-
-
 # ── /add ─────────────────────────────────────────────────────────────────────
 
 @router.message(Command("add"))
 async def cmd_add(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
-    if _require_login(telegram_id):
+    if not await api_client.ensure_token(telegram_id):
         await message.answer("Please send /start first to log in.")
         return
 
@@ -129,7 +125,7 @@ async def _create_task(
 @router.message(Command("my"))
 async def cmd_my(message: Message) -> None:
     telegram_id = message.from_user.id
-    if _require_login(telegram_id):
+    if not await api_client.ensure_token(telegram_id):
         await message.answer("Please send /start first to log in.")
         return
 
@@ -157,7 +153,7 @@ async def cmd_my(message: Message) -> None:
 @router.message(Command("done"))
 async def cmd_done(message: Message) -> None:
     telegram_id = message.from_user.id
-    if _require_login(telegram_id):
+    if not await api_client.ensure_token(telegram_id):
         await message.answer("Please send /start first to log in.")
         return
 

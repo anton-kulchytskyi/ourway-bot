@@ -62,7 +62,7 @@ def _format_day_view(day: dict, title: str) -> str:
 @router.message(Command("today"))
 async def cmd_today(message: Message) -> None:
     telegram_id = message.from_user.id
-    if api_client.get_token(telegram_id) is None:
+    if not await api_client.ensure_token(telegram_id):
         await message.answer("Please send /start first to log in.")
         return
 
@@ -81,7 +81,7 @@ async def cmd_today(message: Message) -> None:
 @router.message(Command("tonight"))
 async def cmd_tonight(message: Message) -> None:
     telegram_id = message.from_user.id
-    if api_client.get_token(telegram_id) is None:
+    if not await api_client.ensure_token(telegram_id):
         await message.answer("Please send /start first to log in.")
         return
 
@@ -116,7 +116,7 @@ async def cmd_tonight(message: Message) -> None:
 @router.callback_query(F.data.startswith("confirm_day:"))
 async def cb_confirm_day(callback: CallbackQuery) -> None:
     telegram_id = callback.from_user.id
-    if api_client.get_token(telegram_id) is None:
+    if not await api_client.ensure_token(telegram_id):
         await callback.answer("Please /start first.", show_alert=True)
         return
 

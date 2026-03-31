@@ -38,7 +38,7 @@ def _is_visible_child(user: dict) -> bool:
 @router.message(Command("kids"))
 async def cmd_kids(message: Message) -> None:
     telegram_id = message.from_user.id
-    if api_client.get_token(telegram_id) is None:
+    if not await api_client.ensure_token(telegram_id):
         await message.answer("Please send /start first to log in.")
         return
 
