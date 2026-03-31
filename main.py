@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
@@ -21,8 +22,15 @@ async def main():
             f"👋 Привіт, {message.from_user.first_name}!\n\nЯ OurWay бот. Поки що в розробці."
         )
 
+    # Brief delay so Railway can stop the previous instance before we start polling.
+    # Without this, rolling deploy causes a TelegramConflictError for ~1s.
+    startup_delay = int(os.getenv("STARTUP_DELAY_SECONDS", "4"))
+    if startup_delay:
+        logger.info("Waiting %ds before polling (rolling deploy guard)...", startup_delay)
+        await asyncio.sleep(startup_delay)
+
     logger.info("Bot started")
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, drop_pending_updates=True)
 
 
 if __name__ == "__main__":
