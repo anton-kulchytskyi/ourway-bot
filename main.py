@@ -3,6 +3,7 @@ import logging
 import os
 
 from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
 from handlers import auth
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 async def main():
     bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher()
+    dp = Dispatcher(storage=MemoryStorage())
 
     dp.include_router(auth.router)
 

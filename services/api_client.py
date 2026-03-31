@@ -67,6 +67,16 @@ async def bot_login(telegram_id: int) -> dict | None:
     )
 
 
+async def telegram_register(telegram_id: int, name: str, locale: str = "en") -> dict | None:
+    """Register a new user directly via Telegram. Returns tokens or None."""
+    from config import BOT_TOKEN
+    return await _request(
+        "POST", "/auth/telegram-register",
+        json={"telegram_id": telegram_id, "name": name, "locale": locale},
+        headers={"X-Bot-Secret": BOT_TOKEN},
+    )
+
+
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 async def link_telegram(link_token: str, telegram_id: int) -> dict | None:
