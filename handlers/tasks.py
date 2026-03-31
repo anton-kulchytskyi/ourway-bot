@@ -66,9 +66,12 @@ async def _pick_space_or_create(
     spaces = await api_client.get_spaces(telegram_id)
     if not spaces:
         await state.clear()
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="➕ Create a space", callback_data="create_space"),
+        ]])
         await message.answer(
-            "You don't have any spaces yet.\n"
-            "Create one in the OurWay app first."
+            "You don't have any spaces yet.\nCreate one first:",
+            reply_markup=keyboard,
         )
         return
 

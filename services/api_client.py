@@ -123,6 +123,13 @@ async def get_spaces(telegram_id: int) -> list | None:
     return await _request("GET", "/spaces", headers=_auth_headers(telegram_id))
 
 
+async def create_space(telegram_id: int, name: str, emoji: str | None = None) -> dict | None:
+    body: dict = {"name": name}
+    if emoji:
+        body["emoji"] = emoji
+    return await _request("POST", "/spaces", headers=_auth_headers(telegram_id), json=body)
+
+
 # ── Daily plan ────────────────────────────────────────────────────────────────
 
 async def get_day(telegram_id: int, date: str) -> dict | None:
