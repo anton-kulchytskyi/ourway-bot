@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
-from handlers import auth, tasks, help
+from handlers import auth, tasks, help, daily
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,6 +18,7 @@ async def main():
 
     dp.include_router(auth.router)
     dp.include_router(tasks.router)
+    dp.include_router(daily.router)
     dp.include_router(help.router)
 
     # Brief delay so Railway can stop the previous instance before we start polling.

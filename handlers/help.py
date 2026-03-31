@@ -14,7 +14,8 @@ async def cmd_help(message: Message) -> None:
         "/my — show your active tasks\n"
         "/done &lt;id&gt; — mark task as done\n\n"
         "📅 <b>Day</b>\n"
-        "/today — your plan for today\n\n"
+        "/today — your plan for today\n"
+        "/tonight — plan tomorrow (evening ritual)\n\n"
         "ℹ️ <b>Other</b>\n"
         "/start — log in or register\n"
         "/help — show this message",
