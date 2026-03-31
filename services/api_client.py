@@ -30,6 +30,9 @@ def _auth_headers(telegram_id: int) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+API_PREFIX = "/api/v1"
+
+
 async def _request(
     method: str,
     path: str,
@@ -38,7 +41,7 @@ async def _request(
     json: Any = None,
     params: dict | None = None,
 ) -> Any:
-    url = f"{API_URL}{path}"
+    url = f"{API_URL}{API_PREFIX}{path}"
     async with aiohttp.ClientSession() as session:
         async with session.request(
             method, url, headers=headers, json=json, params=params
