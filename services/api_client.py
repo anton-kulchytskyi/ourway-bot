@@ -97,10 +97,22 @@ async def get_me(telegram_id: int) -> dict | None:
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
 async def get_my_tasks(telegram_id: int, status: str | None = None) -> list | None:
-    params = {}
+    params: dict = {"mine": "true"}
     if status:
         params["status"] = status
-    return await _request("GET", "/tasks", headers=_auth_headers(telegram_id), params=params or None)
+    return await _request("GET", "/tasks", headers=_auth_headers(telegram_id), params=params)
+
+
+async def get_child_tasks(telegram_id: int, child_id: int) -> list | None:
+    return await _request(
+        "GET", "/tasks",
+        headers=_auth_headers(telegram_id),
+        params={"assignee_id": child_id},
+    )
+
+
+async def get_family_members(telegram_id: int) -> list | None:
+    return await _request("GET", "/users/family", headers=_auth_headers(telegram_id))
 
 
 async def create_task(telegram_id: int, title: str, space_id: int) -> dict | None:

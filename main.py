@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
-from handlers import auth, tasks, help, daily, spaces
+from handlers import auth, tasks, help, daily, spaces, kids
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,6 +19,7 @@ async def main():
     dp.include_router(auth.router)
     dp.include_router(spaces.router)
     dp.include_router(tasks.router)
+    dp.include_router(kids.router)
     dp.include_router(daily.router)
     dp.include_router(help.router)
 
