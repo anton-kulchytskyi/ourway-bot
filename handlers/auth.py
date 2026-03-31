@@ -18,6 +18,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 
+from locales import t
 from services import api_client
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,12 @@ class RegisterStates(StatesGroup):
     waiting_for_name = State()
 
 
+def _tg_locale(message: Message) -> str:
+    """Detect locale from Telegram language code before the user is registered."""
+    lc = message.from_user.language_code or "en"
+    return "uk" if lc.startswith("uk") else "en"
+
+
 # ── /start ────────────────────────────────────────────────────────────────────
 
 @router.message(CommandStart())
@@ -35,76 +42,67 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     args = message.text.split(maxsplit=1)[1] if " " in message.text else ""
     telegram_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
+    locale = _tg_locale(message)
 
     # ── Flow B: deep link with link token ────────────────────────────────────
     if args:
         link_token = args.strip()
         result = await api_client.link_telegram(link_token, telegram_id)
         if result is None:
-            await message.answer(
-                "❌ The link is invalid or has expired.\n"
-                "Please generate a new one in the app: Settings → Connect Telegram."
-            )
+            await message.answer(t("auth.link_invalid", locale))
             return
 
         tokens = await api_client.bot_login(telegram_id)
         if tokens:
             api_client.save_token(telegram_id, tokens["access_token"])
-            await message.answer(
-                f"✅ Your Telegram account is now connected!\n\n"
-                f"Welcome, {first_name}! Type /help to see what I can do."
-            )
+            me = await api_client.get_me(telegram_id)
+            if me:
+                api_client.save_locale(telegram_id, me.get("locale", locale))
+                locale = api_client.get_locale(telegram_id)
+            await message.answer(t("auth.connected_welcome", locale, name=first_name))
         else:
-            await message.answer(
-                "✅ Account connected! Send /start again to log in."
-            )
+            await message.answer(t("auth.connected_start_again", locale))
         return
 
     # ── Flow C: returning user — try auto-login ───────────────────────────────
     tokens = await api_client.bot_login(telegram_id)
     if tokens:
         api_client.save_token(telegram_id, tokens["access_token"])
-        await message.answer(
-            f"👋 Welcome back, {first_name}!\n\n"
-            "Type /help to see available commands."
-        )
+        me = await api_client.get_me(telegram_id)
+        if me:
+            api_client.save_locale(telegram_id, me.get("locale", locale))
+            locale = api_client.get_locale(telegram_id)
+        await message.answer(t("auth.welcome_back", locale, name=first_name))
         return
 
     # ── Flow A: new user — start registration ────────────────────────────────
     await state.set_state(RegisterStates.waiting_for_name)
-    await message.answer(
-        f"👋 Hi, {first_name}! Welcome to OurWay — your family planner.\n\n"
-        "Let's set up your account. What's your name?"
-    )
+    await message.answer(t("auth.hello_new_user", locale, name=first_name))
 
 
 @router.message(RegisterStates.waiting_for_name, F.text)
 async def process_name(message: Message, state: FSMContext) -> None:
     name = message.text.strip()
     telegram_id = message.from_user.id
+    locale = _tg_locale(message)
 
     if len(name) < 2:
-        await message.answer("Please enter at least 2 characters.")
+        await message.answer(t("common.min_2_chars", locale))
         return
 
-    locale = message.from_user.language_code or "en"
     # Normalise: only use 'en' or 'uk', default to 'en'
-    locale = "uk" if locale.startswith("uk") else "en"
+    reg_locale = "uk" if locale == "uk" else "en"
 
-    tokens = await api_client.telegram_register(telegram_id, name, locale)
+    tokens = await api_client.telegram_register(telegram_id, name, reg_locale)
     if tokens is None:
         # Already registered — just log in
         tokens = await api_client.bot_login(telegram_id)
 
     if tokens:
         api_client.save_token(telegram_id, tokens["access_token"])
+        api_client.save_locale(telegram_id, reg_locale)
         await state.clear()
-        await message.answer(
-            f"🎉 Welcome to OurWay, {name}!\n\n"
-            "Your account is ready. Type /help to get started."
-        )
+        await message.answer(t("auth.registered", reg_locale, name=name))
     else:
         await state.clear()
-        await message.answer(
-            "Something went wrong. Please try /start again."
-        )
+        await message.answer(t("auth.error", locale))

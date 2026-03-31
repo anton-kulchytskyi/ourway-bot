@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 # In-memory token storage: telegram_id → access_token
 _tokens: dict[int, str] = {}
+# In-memory locale cache: telegram_id → locale ("en" or "uk")
+_locales: dict[int, str] = {}
 
 
 def save_token(telegram_id: int, token: str) -> None:
@@ -21,6 +23,14 @@ def save_token(telegram_id: int, token: str) -> None:
 
 def get_token(telegram_id: int) -> str | None:
     return _tokens.get(telegram_id)
+
+
+def save_locale(telegram_id: int, locale: str) -> None:
+    _locales[telegram_id] = locale if locale in ("en", "uk") else "en"
+
+
+def get_locale(telegram_id: int) -> str:
+    return _locales.get(telegram_id, "en")
 
 
 def _auth_headers(telegram_id: int) -> dict[str, str]:
@@ -42,6 +52,11 @@ async def ensure_token(telegram_id: int) -> bool:
     result = await bot_login(telegram_id)
     if result and result.get("access_token"):
         save_token(telegram_id, result["access_token"])
+        # Restore locale from backend if not cached
+        if telegram_id not in _locales:
+            me = await get_me(telegram_id)
+            if me:
+                save_locale(telegram_id, me.get("locale", "en"))
         return True
     return False
 
@@ -144,12 +159,19 @@ async def create_child_bot(
     )
 
 
-async def create_task(telegram_id: int, title: str, space_id: int) -> dict | None:
-    return await _request(
-        "POST", "/tasks",
-        headers=_auth_headers(telegram_id),
-        json={"title": title, "space_id": space_id, "status": "todo"},
-    )
+async def create_task(
+    telegram_id: int,
+    title: str,
+    space_id: int,
+    scheduled_date: str | None = None,
+    due_date: str | None = None,
+) -> dict | None:
+    body: dict = {"title": title, "space_id": space_id, "status": "todo"}
+    if scheduled_date:
+        body["scheduled_date"] = scheduled_date
+    if due_date:
+        body["due_date"] = due_date
+    return await _request("POST", "/tasks", headers=_auth_headers(telegram_id), json=body)
 
 
 async def complete_task(telegram_id: int, task_id: int) -> dict | None:
@@ -157,6 +179,15 @@ async def complete_task(telegram_id: int, task_id: int) -> dict | None:
         "PATCH", f"/tasks/{task_id}",
         headers=_auth_headers(telegram_id),
         json={"status": "done"},
+    )
+
+
+async def update_task(telegram_id: int, task_id: int, **fields) -> dict | None:
+    """Partial update of a task. Pass keyword args matching TaskUpdate fields."""
+    return await _request(
+        "PATCH", f"/tasks/{task_id}",
+        headers=_auth_headers(telegram_id),
+        json={k: v for k, v in fields.items() if v is not None},
     )
 
 
@@ -169,6 +200,31 @@ async def create_space(telegram_id: int, name: str, emoji: str | None = None) ->
     if emoji:
         body["emoji"] = emoji
     return await _request("POST", "/spaces", headers=_auth_headers(telegram_id), json=body)
+
+
+# ── Schedule ──────────────────────────────────────────────────────────────────
+
+async def get_schedules(telegram_id: int, user_id: int | None = None) -> list | None:
+    params: dict = {}
+    if user_id:
+        params["user_id"] = user_id
+    return await _request("GET", "/schedule", headers=_auth_headers(telegram_id), params=params or None)
+
+
+async def create_schedule(telegram_id: int, body: dict) -> dict | None:
+    return await _request("POST", "/schedule", headers=_auth_headers(telegram_id), json=body)
+
+
+async def delete_schedule(telegram_id: int, schedule_id: int) -> bool:
+    """Returns True on success (204), False on error."""
+    url = f"{API_URL}{API_PREFIX}/schedule/{schedule_id}"
+    import aiohttp
+    token = get_token(telegram_id)
+    if not token:
+        return False
+    async with aiohttp.ClientSession() as session:
+        async with session.delete(url, headers={"Authorization": f"Bearer {token}"}) as resp:
+            return resp.status == 204
 
 
 # ── Daily plan ────────────────────────────────────────────────────────────────

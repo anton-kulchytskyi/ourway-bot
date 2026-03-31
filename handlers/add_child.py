@@ -18,6 +18,7 @@ from aiogram.types import (
     Message,
 )
 
+from locales import t
 from services import api_client
 
 logger = logging.getLogger(__name__)
@@ -30,28 +31,22 @@ class AddChildFSM(StatesGroup):
     has_tg = State()
 
 
-def _autonomy_kb() -> InlineKeyboardMarkup:
+def _autonomy_kb(locale: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="1 — Supervised (≤12)", callback_data="aut:1"),
-        ],
-        [
-            InlineKeyboardButton(text="2 — Semi (12–14)", callback_data="aut:2"),
-        ],
-        [
-            InlineKeyboardButton(text="3 — Autonomous (14+)", callback_data="aut:3"),
-        ],
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="aut:cancel")],
+        [InlineKeyboardButton(text=t("add_child.autonomy_supervised", locale), callback_data="aut:1")],
+        [InlineKeyboardButton(text=t("add_child.autonomy_semi", locale), callback_data="aut:2")],
+        [InlineKeyboardButton(text=t("add_child.autonomy_autonomous", locale), callback_data="aut:3")],
+        [InlineKeyboardButton(text=t("add_child.cancel_btn", locale), callback_data="aut:cancel")],
     ])
 
 
-def _has_tg_kb() -> InlineKeyboardMarkup:
+def _has_tg_kb(locale: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ Yes — send invite link", callback_data="hastg:yes"),
-            InlineKeyboardButton(text="🚫 No — I manage for them", callback_data="hastg:no"),
+            InlineKeyboardButton(text=t("add_child.has_tg_yes", locale), callback_data="hastg:yes"),
+            InlineKeyboardButton(text=t("add_child.has_tg_no", locale), callback_data="hastg:no"),
         ],
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="hastg:cancel")],
+        [InlineKeyboardButton(text=t("add_child.cancel_btn", locale), callback_data="hastg:cancel")],
     ])
 
 
@@ -59,25 +54,29 @@ def _has_tg_kb() -> InlineKeyboardMarkup:
 async def cmd_add_child(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
     if not await api_client.ensure_token(telegram_id):
-        await message.answer("Please send /start first to log in.")
+        await message.answer(t("common.not_logged_in", api_client.get_locale(telegram_id)))
         return
 
+    locale = api_client.get_locale(telegram_id)
     await state.set_state(AddChildFSM.name)
-    await message.answer("👶 What is the child's name?")
+    await message.answer(t("add_child.name_prompt", locale))
 
 
 @router.message(AddChildFSM.name)
 async def got_name(message: Message, state: FSMContext) -> None:
     name = message.text.strip() if message.text else ""
+    telegram_id = message.from_user.id
+    locale = api_client.get_locale(telegram_id)
+
     if not name:
-        await message.answer("Please enter a valid name.")
+        await message.answer(t("add_child.invalid_name", locale))
         return
 
     await state.update_data(name=name)
     await state.set_state(AddChildFSM.autonomy)
     await message.answer(
-        f"Got it — <b>{name}</b>.\n\nChoose the autonomy level:",
-        reply_markup=_autonomy_kb(),
+        t("add_child.autonomy_prompt", locale, name=name),
+        reply_markup=_autonomy_kb(locale),
         parse_mode="HTML",
     )
 
@@ -85,29 +84,31 @@ async def got_name(message: Message, state: FSMContext) -> None:
 @router.callback_query(AddChildFSM.autonomy, F.data.startswith("aut:"))
 async def got_autonomy(callback: CallbackQuery, state: FSMContext) -> None:
     value = callback.data.split(":")[1]
+    locale = api_client.get_locale(callback.from_user.id)
     await callback.message.delete()
 
     if value == "cancel":
         await state.clear()
-        await callback.message.answer("Cancelled.")
+        await callback.message.answer(t("common.cancelled", locale))
         return
 
     await state.update_data(autonomy_level=int(value))
     await state.set_state(AddChildFSM.has_tg)
     await callback.message.answer(
-        "Does the child have a Telegram account?",
-        reply_markup=_has_tg_kb(),
+        t("add_child.has_tg_prompt", locale),
+        reply_markup=_has_tg_kb(locale),
     )
 
 
 @router.callback_query(AddChildFSM.has_tg, F.data.startswith("hastg:"))
 async def got_has_tg(callback: CallbackQuery, state: FSMContext) -> None:
     value = callback.data.split(":")[1]
+    locale = api_client.get_locale(callback.from_user.id)
     await callback.message.delete()
 
     if value == "cancel":
         await state.clear()
-        await callback.message.answer("Cancelled.")
+        await callback.message.answer(t("common.cancelled", locale))
         return
 
     data = await state.get_data()
@@ -124,7 +125,7 @@ async def got_has_tg(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
     if result is None:
-        await callback.message.answer("❌ Failed to create child profile. Please try again.")
+        await callback.message.answer(t("add_child.create_failed", locale))
         return
 
     child = result.get("child", {})
@@ -133,15 +134,11 @@ async def got_has_tg(callback: CallbackQuery, state: FSMContext) -> None:
 
     if is_managed:
         await callback.message.answer(
-            f"✅ <b>{name}</b>'s profile created (managed).\n\n"
-            "You can see their tasks in /kids and mark tasks done on their behalf.",
+            t("add_child.managed_created", locale, name=name),
             parse_mode="HTML",
         )
     else:
         await callback.message.answer(
-            f"✅ <b>{name}</b>'s account created.\n\n"
-            f"Share this link with your child so they can connect their Telegram:\n\n"
-            f"<code>{invite_link}</code>\n\n"
-            "The link is valid for 24 hours.",
+            t("add_child.tg_created", locale, name=name, link=invite_link or ""),
             parse_mode="HTML",
         )

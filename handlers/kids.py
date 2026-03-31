@@ -11,6 +11,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from locales import t
 from services import api_client
 
 logger = logging.getLogger(__name__)
@@ -39,42 +40,40 @@ def _is_visible_child(user: dict) -> bool:
 async def cmd_kids(message: Message) -> None:
     telegram_id = message.from_user.id
     if not await api_client.ensure_token(telegram_id):
-        await message.answer("Please send /start first to log in.")
+        await message.answer(t("common.not_logged_in", api_client.get_locale(telegram_id)))
         return
 
+    locale = api_client.get_locale(telegram_id)
     members = await api_client.get_family_members(telegram_id)
     if members is None:
-        await message.answer("❌ Could not load family members.")
+        await message.answer(t("kids.load_failed", locale))
         return
 
     children = [m for m in members if _is_visible_child(m)]
     if not children:
-        await message.answer(
-            "No children in your family yet.\n\n"
-            "Use /add_child to add one."
-        )
+        await message.answer(t("kids.no_children", locale))
         return
 
-    lines = ["<b>Kids' tasks:</b>"]
+    lines = [t("kids.header", locale)]
 
     for child in children:
         name = child["name"]
         managed = child.get("is_managed", False)
-        tag = " (managed)" if managed else ""
+        tag = t("kids.managed_tag", locale) if managed else ""
         lines += ["", f"👤 <b>{name}</b>{tag}"]
 
         tasks = await api_client.get_child_tasks(telegram_id, child["id"])
         if tasks is None:
-            lines.append("  ❌ Failed to load tasks")
+            lines.append(t("kids.tasks_load_failed", locale))
             continue
 
-        active = [t for t in tasks if t.get("status") != "done"]
+        active = [task for task in tasks if task.get("status") != "done"]
         if not active:
-            lines.append("  ✅ No active tasks")
+            lines.append(t("kids.no_active_tasks", locale))
         else:
-            for t in active:
-                emoji = STATUS_EMOJI.get(t.get("status", ""), "•")
-                lines.append(f"  {emoji} #{t['id']} {t['title']}")
+            for task in active:
+                emoji = STATUS_EMOJI.get(task.get("status", ""), "•")
+                lines.append(f"  {emoji} #{task['id']} {task['title']}")
 
-    lines += ["", "Use /done &lt;id&gt; to complete a task."]
+    lines += ["", t("kids.footer", locale)]
     await message.answer("\n".join(lines), parse_mode="HTML")

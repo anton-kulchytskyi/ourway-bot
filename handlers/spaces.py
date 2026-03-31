@@ -9,6 +9,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from locales import t
 from services import api_client
 
 logger = logging.getLogger(__name__)
@@ -26,26 +27,27 @@ class CreateSpaceStates(StatesGroup):
 async def cmd_spaces(message: Message) -> None:
     telegram_id = message.from_user.id
     if not await api_client.ensure_token(telegram_id):
-        await message.answer("Please send /start first to log in.")
+        await message.answer(t("common.not_logged_in", api_client.get_locale(telegram_id)))
         return
 
+    locale = api_client.get_locale(telegram_id)
     spaces = await api_client.get_spaces(telegram_id)
     if spaces is None:
-        await message.answer("❌ Failed to load spaces.")
+        await message.answer(t("space.load_failed", locale))
         return
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="➕ Create new space", callback_data="create_space"),
+        InlineKeyboardButton(
+            text=t("space.create_new_btn", locale),
+            callback_data="create_space",
+        ),
     ]])
 
     if not spaces:
-        await message.answer(
-            "You don't have any spaces yet.\n\nCreate your first one:",
-            reply_markup=keyboard,
-        )
+        await message.answer(t("space.no_spaces", locale), reply_markup=keyboard)
         return
 
-    lines = ["<b>Your spaces:</b>", ""]
+    lines = [t("space.list_header", locale), ""]
     for s in spaces:
         emoji = s.get("emoji") or "📁"
         lines.append(f"{emoji} {s['name']}")
@@ -62,25 +64,32 @@ async def cmd_spaces(message: Message) -> None:
 @router.callback_query(F.data == "create_space")
 async def cb_create_space(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
+    locale = api_client.get_locale(callback.from_user.id)
     await state.set_state(CreateSpaceStates.waiting_for_name)
-    await callback.message.answer("📁 What's the name for your new space?\n(e.g. Family, Home, Work)")
+    await callback.message.answer(t("space.name_prompt", locale))
 
 
 @router.message(CreateSpaceStates.waiting_for_name, F.text)
 async def process_space_name(message: Message, state: FSMContext) -> None:
     name = message.text.strip()
+    telegram_id = message.from_user.id
+    locale = api_client.get_locale(telegram_id)
+
     if len(name) < 2:
-        await message.answer("Please enter at least 2 characters.")
+        await message.answer(t("common.min_2_chars", locale))
         return
 
     await state.update_data(space_name=name)
     await state.set_state(CreateSpaceStates.waiting_for_emoji)
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Skip", callback_data="space_emoji_skip"),
+        InlineKeyboardButton(
+            text=t("space.skip_btn", locale),
+            callback_data="space_emoji_skip",
+        ),
     ]])
     await message.answer(
-        f"Got it: <b>{name}</b>\n\nSend an emoji for this space (or skip):",
+        t("space.emoji_prompt", locale, name=name),
         parse_mode="HTML",
         reply_markup=keyboard,
     )
@@ -104,14 +113,14 @@ async def _finish_create_space(
     message: Message, state: FSMContext,
     telegram_id: int, name: str, emoji: str | None,
 ) -> None:
+    locale = api_client.get_locale(telegram_id)
     space = await api_client.create_space(telegram_id, name, emoji)
     await state.clear()
     if space:
         icon = space.get("emoji") or "📁"
         await message.answer(
-            f"✅ Space created: {icon} <b>{space['name']}</b>\n\n"
-            "Now you can add tasks with /add",
+            t("space.created", locale, emoji=icon, name=space["name"]),
             parse_mode="HTML",
         )
     else:
-        await message.answer("❌ Failed to create space. Please try again.")
+        await message.answer(t("space.create_failed", locale))

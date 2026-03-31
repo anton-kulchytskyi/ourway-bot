@@ -8,20 +8,21 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from locales import t
 from services import api_client
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 
-def _fmt_time(t: str | None) -> str:
+def _fmt_time(time_str: str | None) -> str:
     """'07:30:00' → '07:30'"""
-    if not t:
+    if not time_str:
         return ""
-    return t[:5]
+    return time_str[:5]
 
 
-def _format_day_view(day: dict, title: str) -> str:
+def _format_day_view(day: dict, title: str, locale: str) -> str:
     lines = [f"<b>{title}</b>", ""]
 
     schedule = day.get("schedule_items", [])
@@ -30,29 +31,29 @@ def _format_day_view(day: dict, title: str) -> str:
 
     if schedule:
         for item in schedule:
-            t = _fmt_time(item.get("time_start"))
-            lines.append(f"🕐 {t} {item['title']}")
+            time = _fmt_time(item.get("time_start"))
+            lines.append(f"🕐 {time} {item['title']}")
 
     if events:
         for event in events:
-            t = _fmt_time(event.get("time_start"))
-            prefix = f" {t}" if t else ""
+            time = _fmt_time(event.get("time_start"))
+            prefix = f" {time}" if time else ""
             lines.append(f"📅{prefix} {event['title']}")
 
     if tasks:
         for task in tasks:
-            t = _fmt_time(task.get("time_start"))
-            prefix = f" {t}" if t else ""
+            time = _fmt_time(task.get("time_start"))
+            prefix = f" {time}" if time else ""
             status = task.get("status", "")
             emoji = "✅" if status == "done" else "📝"
             lines.append(f"{emoji}{prefix} {task['title']}")
 
     if not (schedule or events or tasks):
-        lines.append("Nothing planned yet.")
+        lines.append(t("daily.nothing_planned", locale))
 
     plan = day.get("plan", {})
     if plan.get("status") == "confirmed":
-        lines += ["", "✅ Plan confirmed"]
+        lines += ["", t("daily.plan_confirmed", locale)]
 
     return "\n".join(lines)
 
@@ -63,16 +64,17 @@ def _format_day_view(day: dict, title: str) -> str:
 async def cmd_today(message: Message) -> None:
     telegram_id = message.from_user.id
     if not await api_client.ensure_token(telegram_id):
-        await message.answer("Please send /start first to log in.")
+        await message.answer(t("common.not_logged_in", api_client.get_locale(telegram_id)))
         return
 
+    locale = api_client.get_locale(telegram_id)
     today = date.today().isoformat()
     day = await api_client.get_day(telegram_id, today)
     if day is None:
-        await message.answer("❌ Could not load today's plan.")
+        await message.answer(t("daily.load_today_failed", locale))
         return
 
-    text = _format_day_view(day, f"☀️ Today — {today}")
+    text = _format_day_view(day, t("daily.today_title", locale, date=today), locale)
     await message.answer(text, parse_mode="HTML")
 
 
@@ -82,29 +84,33 @@ async def cmd_today(message: Message) -> None:
 async def cmd_tonight(message: Message) -> None:
     telegram_id = message.from_user.id
     if not await api_client.ensure_token(telegram_id):
-        await message.answer("Please send /start first to log in.")
+        await message.answer(t("common.not_logged_in", api_client.get_locale(telegram_id)))
         return
 
+    locale = api_client.get_locale(telegram_id)
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
     day = await api_client.get_day(telegram_id, tomorrow)
     if day is None:
-        await message.answer("❌ Could not load tomorrow's plan.")
+        await message.answer(t("daily.load_tomorrow_failed", locale))
         return
 
-    text = _format_day_view(day, f"🌙 Tomorrow — {tomorrow}")
+    text = _format_day_view(day, t("daily.tomorrow_title", locale, date=tomorrow), locale)
 
     plan = day.get("plan", {})
     if plan.get("status") == "confirmed":
-        await message.answer(text + "\n\n✅ Already confirmed!", parse_mode="HTML")
+        await message.answer(
+            text + "\n\n" + t("daily.already_confirmed", locale),
+            parse_mode="HTML",
+        )
         return
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
-            text="✅ Confirm plan",
+            text=t("daily.confirm_btn", locale),
             callback_data=f"confirm_day:{tomorrow}",
         ),
         InlineKeyboardButton(
-            text="➕ Add task",
+            text=t("daily.add_task_btn", locale),
             callback_data="add_task_from_ritual",
         ),
     ]])
@@ -117,32 +123,28 @@ async def cmd_tonight(message: Message) -> None:
 async def cb_confirm_day(callback: CallbackQuery) -> None:
     telegram_id = callback.from_user.id
     if not await api_client.ensure_token(telegram_id):
-        await callback.answer("Please /start first.", show_alert=True)
+        await callback.answer(
+            t("common.not_logged_in", api_client.get_locale(telegram_id)),
+            show_alert=True,
+        )
         return
 
+    locale = api_client.get_locale(telegram_id)
     date_str = callback.data.split(":", 1)[1]
     result = await api_client.confirm_day(telegram_id, date_str)
     if result:
         await callback.message.edit_reply_markup(reply_markup=None)
-        await callback.message.answer("✅ Plan confirmed! Sleep well 🌙")
+        await callback.message.answer(t("daily.plan_confirmed_msg", locale))
     else:
-        await callback.answer("❌ Could not confirm. Try again.", show_alert=True)
+        await callback.answer(t("daily.confirm_failed", locale), show_alert=True)
     await callback.answer()
 
 
 @router.callback_query(F.data == "add_task_from_ritual")
 async def cb_add_task_ritual(callback: CallbackQuery) -> None:
     await callback.answer()
+    locale = api_client.get_locale(callback.from_user.id)
     await callback.message.answer(
-        "Use /add &lt;task title&gt; to add a task.\n"
-        "Then come back and confirm the plan.",
+        t("daily.add_task_hint", locale),
         parse_mode="HTML",
     )
-
-
-# ── Handler for evening ritual deep link: /start ritual ───────────────────────
-
-@router.message(Command("tonight"))
-async def ritual_reminder(message: Message) -> None:
-    """Alias — same as /tonight."""
-    await cmd_tonight(message)
