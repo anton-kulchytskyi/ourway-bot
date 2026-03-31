@@ -3,10 +3,9 @@ import logging
 import os
 
 from aiogram import Bot, Dispatcher
-from aiogram.filters import CommandStart
-from aiogram.types import Message
 
 from config import BOT_TOKEN
+from handlers import auth
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,11 +15,7 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
-    @dp.message(CommandStart())
-    async def start(message: Message):
-        await message.answer(
-            f"👋 Привіт, {message.from_user.first_name}!\n\nЯ OurWay бот. Поки що в розробці."
-        )
+    dp.include_router(auth.router)
 
     # Brief delay so Railway can stop the previous instance before we start polling.
     # Without this, rolling deploy causes a TelegramConflictError for ~1s.
