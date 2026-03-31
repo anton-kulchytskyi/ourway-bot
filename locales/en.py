@@ -123,7 +123,11 @@ STRINGS: dict[str, str] = {
     "daily.tomorrow_title": "🌙 Tomorrow — {date}",
 
     # ── Schedule management (/schedule command) ─────────────────────────────────
+    "sch.for_whom_prompt": "👤 For whom?",
+    "sch.for_self_btn": "For me",
     "sch.list_header": "<b>Your schedule:</b>",
+    "sch.child_list_header": "<b>{name}'s schedule:</b>",
+    "sch.child_list_empty": "  No schedule yet.",
     "sch.list_empty": "No recurring schedule yet.\n\nUse ➕ to add one.",
     "sch.add_btn": "➕ Add",
     "sch.delete_btn": "🗑 Delete",

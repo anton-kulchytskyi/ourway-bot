@@ -2,8 +2,9 @@
 /schedule — manage recurring schedule (школа, секції, робота).
 
 Flow:
-  /schedule → list + [➕ Add] [🗑 Delete]
-  Add FSM: title → toggle weekdays → time_start → time_end → valid_from → valid_until
+  /schedule → list (own + children) + [➕ Add] [🗑 Delete]
+  Add FSM (owner with children): for_whom → title → toggle weekdays → ...
+  Add FSM (no children / child role): title → toggle weekdays → ...
 """
 import logging
 from datetime import date
@@ -90,20 +91,34 @@ async def cmd_schedule(message: Message) -> None:
         return
 
     locale = api_client.get_locale(telegram_id)
-    schedules = await api_client.get_schedules(telegram_id)
+
+    # Own schedule
+    own_schedules = await api_client.get_schedules(telegram_id) or []
+    lines = [t("sch.list_header", locale), ""]
+    if own_schedules:
+        for s in own_schedules:
+            lines.append(_fmt_schedule(s, locale))
+    else:
+        lines.append(t("sch.list_empty", locale))
+
+    # Children's schedules (owner only)
+    me = await api_client.get_me(telegram_id)
+    if me and me.get("role") == "owner":
+        members = await api_client.get_family_members(telegram_id) or []
+        children = [m for m in members if m.get("role") == "child"]
+        for child in children:
+            child_schedules = await api_client.get_schedules(telegram_id, user_id=child["id"]) or []
+            lines += ["", t("sch.child_list_header", locale, name=child["name"])]
+            if child_schedules:
+                for s in child_schedules:
+                    lines.append("  " + _fmt_schedule(s, locale))
+            else:
+                lines.append(t("sch.child_list_empty", locale))
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text=t("sch.add_btn", locale), callback_data="sch_action:add"),
         InlineKeyboardButton(text=t("sch.delete_btn", locale), callback_data="sch_action:delete"),
     ]])
-
-    if not schedules:
-        await message.answer(t("sch.list_empty", locale), reply_markup=keyboard)
-        return
-
-    lines = [t("sch.list_header", locale), ""]
-    for s in schedules:
-        lines.append(_fmt_schedule(s, locale))
 
     await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=keyboard)
 
@@ -113,7 +128,48 @@ async def cmd_schedule(message: Message) -> None:
 @router.callback_query(F.data == "sch_action:add")
 async def cb_add(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
+    telegram_id = callback.from_user.id
+    locale = api_client.get_locale(telegram_id)
+
+    # Owner with children → ask "for whom?"
+    me = await api_client.get_me(telegram_id)
+    if me and me.get("role") == "owner":
+        members = await api_client.get_family_members(telegram_id) or []
+        children = [m for m in members if m.get("role") == "child"]
+        if children:
+            buttons = [
+                [InlineKeyboardButton(
+                    text=t("sch.for_self_btn", locale),
+                    callback_data="sch_for:self",
+                )]
+            ] + [
+                [InlineKeyboardButton(
+                    text=child["name"],
+                    callback_data=f"sch_for:{child['id']}",
+                )]
+                for child in children
+            ]
+            await callback.message.answer(
+                t("sch.for_whom_prompt", locale),
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+            )
+            return
+
+    # No children or not owner → go straight to name
+    await state.update_data(sch_target_user_id=None)
+    await state.set_state(ScheduleAddFSM.name)
+    await callback.message.answer(t("sch.name_prompt", locale))
+
+
+@router.callback_query(F.data.startswith("sch_for:"))
+async def cb_for_whom(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer()
+    value = callback.data.split(":", 1)[1]
     locale = api_client.get_locale(callback.from_user.id)
+
+    target_user_id = None if value == "self" else int(value)
+    await state.update_data(sch_target_user_id=target_user_id)
+    await callback.message.delete()
     await state.set_state(ScheduleAddFSM.name)
     await callback.message.answer(t("sch.name_prompt", locale))
 
@@ -124,18 +180,33 @@ async def cb_delete_list(callback: CallbackQuery) -> None:
     telegram_id = callback.from_user.id
     locale = api_client.get_locale(telegram_id)
 
-    schedules = await api_client.get_schedules(telegram_id)
-    if not schedules:
+    # Collect own + children's schedules
+    all_schedules = list(await api_client.get_schedules(telegram_id) or [])
+
+    me = await api_client.get_me(telegram_id)
+    if me and me.get("role") == "owner":
+        members = await api_client.get_family_members(telegram_id) or []
+        children = [m for m in members if m.get("role") == "child"]
+        for child in children:
+            child_schedules = await api_client.get_schedules(telegram_id, user_id=child["id"]) or []
+            for s in child_schedules:
+                s["_owner_name"] = child["name"]  # tag for button label
+            all_schedules.extend(child_schedules)
+
+    if not all_schedules:
         await callback.message.answer(t("sch.list_empty", locale))
         return
 
-    buttons = [
-        [InlineKeyboardButton(
-            text=f"{s['title']} ({_days_label(s.get('weekdays', []), locale)})",
+    buttons = []
+    for s in all_schedules:
+        label = s["title"]
+        if s.get("_owner_name"):
+            label += f" ({s['_owner_name']})"
+        buttons.append([InlineKeyboardButton(
+            text=label,
             callback_data=f"sch_del:{s['id']}:{s['title']}",
-        )]
-        for s in schedules
-    ]
+        )])
+
     await callback.message.answer(
         t("sch.pick_to_delete", locale),
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
@@ -322,7 +393,7 @@ async def _finish_schedule(message: Message, state: FSMContext, telegram_id: int
     data = await state.get_data()
     await state.clear()
 
-    body = {
+    body: dict = {
         "title": data["sch_name"],
         "weekdays": data["sch_days"],  # already sorted list
         "time_start": data["sch_time_start"],
@@ -330,6 +401,9 @@ async def _finish_schedule(message: Message, state: FSMContext, telegram_id: int
         "valid_from": data.get("sch_valid_from"),
         "valid_until": data.get("sch_valid_until"),
     }
+    target_user_id = data.get("sch_target_user_id")
+    if target_user_id:
+        body["user_id"] = target_user_id
 
     result = await api_client.create_schedule(telegram_id, body)
     if not result:
