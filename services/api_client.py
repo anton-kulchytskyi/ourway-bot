@@ -115,6 +115,19 @@ async def get_family_members(telegram_id: int) -> list | None:
     return await _request("GET", "/users/family", headers=_auth_headers(telegram_id))
 
 
+async def create_child_bot(
+    telegram_id: int,
+    name: str,
+    autonomy_level: int,
+    is_managed: bool,
+) -> dict | None:
+    return await _request(
+        "POST", "/users/children/bot-create",
+        headers=_auth_headers(telegram_id),
+        json={"name": name, "autonomy_level": autonomy_level, "is_managed": is_managed},
+    )
+
+
 async def create_task(telegram_id: int, title: str, space_id: int) -> dict | None:
     return await _request(
         "POST", "/tasks",
