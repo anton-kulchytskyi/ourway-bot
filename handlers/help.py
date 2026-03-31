@@ -18,7 +18,7 @@ async def cmd_help(message: Message) -> None:
         "/tonight — plan tomorrow (evening ritual)\n\n"
         "👨‍👩‍👧 <b>Family</b>\n"
         "/kids — children's tasks (managed + autonomy 1-2)\n"
-        "/add_child — add a child to your family\n\n"
+        "/add_child — add a child (managed or with TG invite)\n\n"
         "📁 <b>Spaces</b>\n"
         "/spaces — list and create spaces\n\n"
         "ℹ️ <b>Other</b>\n"
