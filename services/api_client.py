@@ -7,7 +7,7 @@ from typing import Any
 
 import aiohttp
 
-from config import API_URL
+from config import API_URL, BOT_TOKEN
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,7 @@ async def _request(
     json: Any = None,
     params: dict | None = None,
 ) -> Any:
+    """Make an API request. Returns parsed JSON, True for empty 2xx (e.g. 204), or None on error."""
     url = f"{API_URL}{API_PREFIX}{path}"
     async with aiohttp.ClientSession() as session:
         async with session.request(
@@ -81,19 +82,15 @@ async def _request(
                 body = await resp.text()
                 logger.error("API %s %s → %s: %s", method, path, resp.status, body)
                 return None
+            if resp.status == 204 or resp.content_length == 0:
+                return True
             return await resp.json()
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
-async def login(email: str, password: str) -> dict | None:
-    """Returns {access_token, refresh_token} or None."""
-    return await _request("POST", "/auth/login", json={"email": email, "password": password})
-
-
 async def bot_login(telegram_id: int) -> dict | None:
     """Authenticate via telegram_id (requires bot_secret header). Returns tokens or None."""
-    from config import BOT_TOKEN
     return await _request(
         "POST", "/auth/bot-login",
         json={"telegram_id": telegram_id},
@@ -103,7 +100,6 @@ async def bot_login(telegram_id: int) -> dict | None:
 
 async def telegram_register(telegram_id: int, name: str, locale: str = "en") -> dict | None:
     """Register a new user directly via Telegram. Returns tokens or None."""
-    from config import BOT_TOKEN
     return await _request(
         "POST", "/auth/telegram-register",
         json={"telegram_id": telegram_id, "name": name, "locale": locale},
@@ -113,7 +109,6 @@ async def telegram_register(telegram_id: int, name: str, locale: str = "en") -> 
 
 async def get_web_token(telegram_id: int) -> str | None:
     """Get a short-lived web login token for the user. Returns the token string or None."""
-    from config import BOT_TOKEN
     result = await _request(
         "POST", "/auth/web-token",
         json={"telegram_id": telegram_id},
@@ -123,13 +118,6 @@ async def get_web_token(telegram_id: int) -> str | None:
 
 
 # ── Users ─────────────────────────────────────────────────────────────────────
-
-async def link_telegram(link_token: str, telegram_id: int) -> dict | None:
-    """Called after user sends /connect <token>. Links TG account on backend."""
-    return await _request(
-        "POST", "/users/telegram/link",
-        json={"token": link_token, "telegram_id": telegram_id},
-    )
 
 
 async def get_me(telegram_id: int) -> dict | None:
@@ -228,14 +216,8 @@ async def create_schedule(telegram_id: int, body: dict) -> dict | None:
 
 async def delete_schedule(telegram_id: int, schedule_id: int) -> bool:
     """Returns True on success (204), False on error."""
-    url = f"{API_URL}{API_PREFIX}/schedule/{schedule_id}"
-    import aiohttp
-    token = get_token(telegram_id)
-    if not token:
-        return False
-    async with aiohttp.ClientSession() as session:
-        async with session.delete(url, headers={"Authorization": f"Bearer {token}"}) as resp:
-            return resp.status == 204
+    result = await _request("DELETE", f"/schedule/{schedule_id}", headers=_auth_headers(telegram_id))
+    return result is not None
 
 
 # ── Daily plan ────────────────────────────────────────────────────────────────
