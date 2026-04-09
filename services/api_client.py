@@ -111,6 +111,17 @@ async def telegram_register(telegram_id: int, name: str, locale: str = "en") -> 
     )
 
 
+async def get_web_token(telegram_id: int) -> str | None:
+    """Get a short-lived web login token for the user. Returns the token string or None."""
+    from config import BOT_TOKEN
+    result = await _request(
+        "POST", "/auth/web-token",
+        json={"telegram_id": telegram_id},
+        headers={"X-Bot-Secret": BOT_TOKEN},
+    )
+    return result["token"] if result else None
+
+
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 async def link_telegram(link_token: str, telegram_id: int) -> dict | None:

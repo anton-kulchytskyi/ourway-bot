@@ -25,6 +25,10 @@ STRINGS: dict[str, str] = {
         "🎉 Welcome to OurWay, {name}!\n\n"
         "Your account is ready. Type /help to get started."
     ),
+    "auth.web_login_link": (
+        "🌐 Open OurWay in your browser:\n{url}\n\n"
+        "The link is valid for 15 minutes."
+    ),
     "auth.error": "Something went wrong. Please try /start again.",
 
     # ── Tasks ───────────────────────────────────────────────────────────────────

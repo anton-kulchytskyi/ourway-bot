@@ -5,6 +5,7 @@ load_dotenv()
 
 BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
 API_URL: str = os.getenv("API_URL", "http://localhost:8000")
+FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 DEFAULT_LOCALE: str = os.getenv("DEFAULT_LOCALE", "en")
 
 if not BOT_TOKEN:
