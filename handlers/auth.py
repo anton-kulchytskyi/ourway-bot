@@ -106,7 +106,7 @@ async def process_name(message: Message, state: FSMContext) -> None:
         await message.answer(t("auth.registered", reg_locale, name=name))
         web_token = await api_client.get_web_token(telegram_id)
         if web_token:
-            url = f"{FRONTEND_URL}/{reg_locale}/auth/callback?token={web_token}"
+            url = f"{FRONTEND_URL.rstrip('/')}/{reg_locale}/auth/callback?token={web_token}"
             await message.answer(t("auth.web_login_link", reg_locale, url=url))
     else:
         await state.clear()
