@@ -16,7 +16,7 @@ from aiogram import F, Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from config import FRONTEND_URL
 from locales import t
@@ -34,6 +34,11 @@ def _tg_locale(message: Message) -> str:
     """Detect locale from Telegram language code before the user is registered."""
     lc = message.from_user.language_code or "en"
     return "uk" if lc.startswith("uk") else "en"
+
+
+def _web_login_keyboard(url: str, locale: str) -> InlineKeyboardMarkup:
+    label = "Відкрити OurWay" if locale == "uk" else "Open OurWay"
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=label, url=url)]])
 
 
 # ── /start ────────────────────────────────────────────────────────────────────
@@ -73,7 +78,15 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         if me:
             api_client.save_locale(telegram_id, me.get("locale", locale))
             locale = api_client.get_locale(telegram_id)
-        await message.answer(t("auth.welcome_back", locale, name=first_name))
+        web_token = await api_client.get_web_token(telegram_id)
+        if web_token:
+            url = f"{FRONTEND_URL.rstrip('/')}/api/auth/callback?token={web_token}"
+            await message.answer(
+                t("auth.welcome_back", locale, name=first_name),
+                reply_markup=_web_login_keyboard(url, locale),
+            )
+        else:
+            await message.answer(t("auth.welcome_back", locale, name=first_name))
         return
 
     # ── Flow A: new user — start registration ────────────────────────────────
@@ -103,11 +116,15 @@ async def process_name(message: Message, state: FSMContext) -> None:
         api_client.save_token(telegram_id, tokens["access_token"])
         api_client.save_locale(telegram_id, reg_locale)
         await state.clear()
-        await message.answer(t("auth.registered", reg_locale, name=name))
         web_token = await api_client.get_web_token(telegram_id)
         if web_token:
             url = f"{FRONTEND_URL.rstrip('/')}/api/auth/callback?token={web_token}"
-            await message.answer(t("auth.web_login_link", reg_locale, url=url))
+            await message.answer(
+                t("auth.registered", reg_locale, name=name),
+                reply_markup=_web_login_keyboard(url, reg_locale),
+            )
+        else:
+            await message.answer(t("auth.registered", reg_locale, name=name))
     else:
         await state.clear()
         await message.answer(t("auth.error", locale))
