@@ -2,7 +2,6 @@
 Task commands: /add, /my, /done
 """
 import logging
-from datetime import date, datetime, timedelta, timezone
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -10,6 +9,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from handlers.scheduling_helpers import day_keyboard, due_keyboard, parse_due_date, resolve_due, resolve_scheduled
 from locales import t
 from services import api_client
 
@@ -31,58 +31,6 @@ class AddTaskStates(StatesGroup):
     waiting_for_day = State()
     waiting_for_due = State()
     waiting_for_due_input = State()
-
-
-def _day_keyboard(locale: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=t("sched.today_btn", locale), callback_data="task_day:today"),
-        InlineKeyboardButton(text=t("sched.tomorrow_btn", locale), callback_data="task_day:tomorrow"),
-        InlineKeyboardButton(text=t("sched.no_date_btn", locale), callback_data="task_day:none"),
-    ]])
-
-
-def _due_keyboard(locale: str, has_scheduled: bool) -> InlineKeyboardMarkup:
-    buttons = []
-    if has_scheduled:
-        buttons.append(InlineKeyboardButton(text=t("sched.due_same_btn", locale), callback_data="task_due:same"))
-    buttons += [
-        InlineKeyboardButton(text=t("sched.due_plus3_btn", locale), callback_data="task_due:plus3"),
-        InlineKeyboardButton(text=t("sched.due_week_btn", locale), callback_data="task_due:week"),
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=[
-        buttons,
-        [
-            InlineKeyboardButton(text=t("sched.due_enter_btn", locale), callback_data="task_due:enter"),
-            InlineKeyboardButton(text=t("sched.due_none_btn", locale), callback_data="task_due:none"),
-        ],
-    ])
-
-
-def _resolve_scheduled(value: str) -> str | None:
-    """Returns ISO date string or None."""
-    today = date.today()
-    if value == "today":
-        return today.isoformat()
-    if value == "tomorrow":
-        return (today + timedelta(days=1)).isoformat()
-    return None
-
-
-def _resolve_due(value: str, scheduled_date: str | None) -> str | None:
-    """Returns ISO datetime string or None."""
-    today = date.today()
-    base = date.fromisoformat(scheduled_date) if scheduled_date else today
-    if value == "same":
-        target = base
-    elif value == "plus3":
-        target = today + timedelta(days=3)
-    elif value == "week":
-        target = today + timedelta(weeks=1)
-    else:
-        return None
-    # End of day UTC
-    dt = datetime(target.year, target.month, target.day, 23, 59, 59, tzinfo=timezone.utc)
-    return dt.isoformat()
 
 
 # ── /add ─────────────────────────────────────────────────────────────────────
@@ -168,7 +116,7 @@ async def _ask_day(
     locale = api_client.get_locale(telegram_id)
     await state.update_data(task_title=title, space_id=space_id, space_name=space_name)
     await state.set_state(AddTaskStates.waiting_for_day)
-    await message.answer(t("sched.pick_day", locale), reply_markup=_day_keyboard(locale))
+    await message.answer(t("sched.pick_day", locale), reply_markup=day_keyboard(locale, "task_day"))
 
 
 @router.callback_query(AddTaskStates.waiting_for_day, F.data.startswith("task_day:"))
@@ -177,13 +125,13 @@ async def process_day_pick(callback: CallbackQuery, state: FSMContext) -> None:
     telegram_id = callback.from_user.id
     locale = api_client.get_locale(telegram_id)
 
-    scheduled_date = _resolve_scheduled(value)
+    scheduled_date = resolve_scheduled(value)
     await state.update_data(scheduled_date=scheduled_date)
     await callback.message.delete()
     await state.set_state(AddTaskStates.waiting_for_due)
     await callback.message.answer(
         t("sched.due_prompt", locale),
-        reply_markup=_due_keyboard(locale, has_scheduled=scheduled_date is not None),
+        reply_markup=due_keyboard(locale, has_scheduled=scheduled_date is not None, prefix="task_due"),
     )
     await callback.answer()
 
@@ -202,7 +150,7 @@ async def process_due_pick(callback: CallbackQuery, state: FSMContext) -> None:
         return
 
     data = await state.get_data()
-    due_date = _resolve_due(value, data.get("scheduled_date"))
+    due_date = resolve_due(value, data.get("scheduled_date"))
     await callback.message.delete()
     await _create_task_final(callback.message, state, telegram_id, data, due_date)
     await callback.answer()
@@ -212,12 +160,8 @@ async def process_due_pick(callback: CallbackQuery, state: FSMContext) -> None:
 async def process_due_input(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
     locale = api_client.get_locale(telegram_id)
-    text = message.text.strip()
-    try:
-        parsed = date.fromisoformat(text)
-        dt = datetime(parsed.year, parsed.month, parsed.day, 23, 59, 59, tzinfo=timezone.utc)
-        due_date = dt.isoformat()
-    except ValueError:
+    due_date = parse_due_date(message.text)
+    if due_date is None:
         await message.answer(t("sched.due_invalid", locale))
         return
 
