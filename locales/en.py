@@ -184,13 +184,11 @@ STRINGS: dict[str, str] = {
     "invite.created": (
         "✅ Invitation created!\n\n"
         "Role: <b>{role}</b>\n\n"
-        "Send this link to the person you want to invite:\n\n"
-        "📱 <b>Via Telegram (recommended):</b>\n"
-        "<code>{tg_link}</code>\n\n"
-        "🌐 <b>Via web:</b>\n"
-        "<code>{web_link}</code>\n\n"
+        "Forward the button below to the person you want to invite.\n"
         "The link expires in 7 days."
     ),
+    "invite.open_tg_btn": "📱 Join via Telegram",
+    "invite.open_web_btn": "🌐 Open in browser",
 
     # ── Help ────────────────────────────────────────────────────────────────────
     "help.text": (

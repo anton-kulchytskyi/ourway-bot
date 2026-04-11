@@ -114,8 +114,13 @@ async def got_role(callback: CallbackQuery, state: FSMContext) -> None:
     web_link = f"{FRONTEND_URL.rstrip('/')}/{locale}/invite/{token}"
     role_label = t(f"invite.role_{value}", locale)
 
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t("invite.open_tg_btn", locale), url=tg_link)],
+        [InlineKeyboardButton(text=t("invite.open_web_btn", locale), url=web_link)],
+    ])
+
     await callback.message.answer(
-        t("invite.created", locale, role=role_label, tg_link=tg_link, web_link=web_link),
+        t("invite.created", locale, role=role_label),
         parse_mode="HTML",
-        disable_web_page_preview=True,
+        reply_markup=kb,
     )
