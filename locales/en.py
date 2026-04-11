@@ -174,17 +174,11 @@ STRINGS: dict[str, str] = {
         "You've joined <b>{space}</b>. Type /help to get started."
     ),
     "invite.accept_failed": "⚠️ Account created, but couldn't join the space. The link may have already been used.\nAsk the sender for a new invite.",
-    "invite.pick_space": "👥 Which space do you want to invite someone to?",
-    "invite.pick_role": "🔑 What role should they have?\n\n<b>Editor</b> — can create and edit tasks\n<b>Viewer</b> — read-only access",
-    "invite.role_editor": "✏️ Editor",
-    "invite.role_viewer": "👁 Viewer",
-    "invite.cancel_btn": "❌ Cancel",
-    "invite.no_owned_spaces": "You don't own any spaces yet.\n\nCreate a space first with /spaces.",
     "invite.create_failed": "❌ Failed to create invitation. Please try again.",
     "invite.created": (
-        "✅ Invitation created!\n\n"
-        "Role: <b>{role}</b>\n\n"
-        "Forward the button below to the person you want to invite.\n"
+        "✅ Invitation link ready!\n\n"
+        "Forward the buttons below to the person you want to invite.\n"
+        "They'll join your family organisation.\n\n"
         "The link expires in 7 days."
     ),
     "invite.open_tg_btn": "📱 Join via Telegram",
