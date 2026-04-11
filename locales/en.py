@@ -162,6 +162,36 @@ STRINGS: dict[str, str] = {
     "sch.days_sat": "Sat",
     "sch.days_sun": "Sun",
 
+    # ── Invite ──────────────────────────────────────────────────────────────────
+    "invite.link_invalid": "❌ This invitation link is invalid or has expired.\nAsk the sender to create a new one with /invite.",
+    "invite.register_prompt": (
+        "👋 You've been invited to join <b>{space}</b> by {inviter}!\n\n"
+        "Let's create your OurWay account. What's your name?"
+    ),
+    "invite.joined": "🎉 You've joined <b>{space}</b>!\n\nType /help to see what you can do.",
+    "invite.registered_joined": (
+        "🎉 Welcome to OurWay, {name}!\n\n"
+        "You've joined <b>{space}</b>. Type /help to get started."
+    ),
+    "invite.accept_failed": "⚠️ Account created, but couldn't join the space. The link may have already been used.\nAsk the sender for a new invite.",
+    "invite.pick_space": "👥 Which space do you want to invite someone to?",
+    "invite.pick_role": "🔑 What role should they have?\n\n<b>Editor</b> — can create and edit tasks\n<b>Viewer</b> — read-only access",
+    "invite.role_editor": "✏️ Editor",
+    "invite.role_viewer": "👁 Viewer",
+    "invite.cancel_btn": "❌ Cancel",
+    "invite.no_owned_spaces": "You don't own any spaces yet.\n\nCreate a space first with /spaces.",
+    "invite.create_failed": "❌ Failed to create invitation. Please try again.",
+    "invite.created": (
+        "✅ Invitation created!\n\n"
+        "Role: <b>{role}</b>\n\n"
+        "Send this link to the person you want to invite:\n\n"
+        "📱 <b>Via Telegram (recommended):</b>\n"
+        "<code>{tg_link}</code>\n\n"
+        "🌐 <b>Via web:</b>\n"
+        "<code>{web_link}</code>\n\n"
+        "The link expires in 7 days."
+    ),
+
     # ── Help ────────────────────────────────────────────────────────────────────
     "help.text": (
         "<b>OurWay Bot — Commands</b>\n\n"
@@ -178,7 +208,8 @@ STRINGS: dict[str, str] = {
         "/schedule — manage recurring schedule (school, clubs, work)\n\n"
         "👨‍👩‍👧 <b>Family</b>\n"
         "/kids — children's tasks (managed + autonomy 1-2)\n"
-        "/add_child — add a child (managed or with TG invite)\n\n"
+        "/add_child — add a child (managed or with TG invite)\n"
+        "/invite — invite an adult member to a space\n\n"
         "📁 <b>Spaces</b>\n"
         "/spaces — list and create spaces\n\n"
         "ℹ️ <b>Other</b>\n"

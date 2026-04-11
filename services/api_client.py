@@ -194,6 +194,26 @@ async def get_spaces(telegram_id: int) -> list | None:
     return await _request("GET", "/spaces", headers=_auth_headers(telegram_id))
 
 
+async def create_invitation(telegram_id: int, space_id: int, role: str) -> dict | None:
+    return await _request(
+        "POST", "/invitations",
+        headers=_auth_headers(telegram_id),
+        json={"space_id": space_id, "role": role},
+    )
+
+
+async def accept_invitation(telegram_id: int, token: str) -> bool:
+    result = await _request(
+        "POST", f"/invitations/{token}/accept",
+        headers=_auth_headers(telegram_id),
+    )
+    return result is not None
+
+
+async def get_invitation_info(token: str) -> dict | None:
+    return await _request("GET", f"/invitations/{token}")
+
+
 async def create_space(telegram_id: int, name: str, emoji: str | None = None) -> dict | None:
     body: dict = {"name": name}
     if emoji:

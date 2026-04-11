@@ -9,6 +9,10 @@ Flow B — Deep link linking (user registered on web, links TG):
 
 Flow C — Returning user:
   /start → auto-login via bot-login → welcome back
+
+Flow D — Invite deep link (adult member invite):
+  /start inv_TOKEN → fetch invite info → if returning user: accept immediately
+                   → if new user: register (with name prompt) → accept → joined
 """
 import logging
 
@@ -49,6 +53,40 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
     locale = _tg_locale(message)
+
+    # ── Flow D: invite deep link (/start inv_TOKEN) ───────────────────────────
+    if args and args.startswith("inv_"):
+        inv_token = args[4:]  # strip "inv_" prefix
+        inv_info = await api_client.get_invitation_info(inv_token)
+        if not inv_info:
+            await message.answer(t("invite.link_invalid", locale))
+            return
+
+        space_name = inv_info.get("space_name", "")
+        inviter_name = inv_info.get("invited_by_name", "")
+
+        # Returning user — accept immediately
+        tokens = await api_client.bot_login(telegram_id)
+        if tokens:
+            api_client.save_token(telegram_id, tokens["access_token"])
+            me = await api_client.get_me(telegram_id)
+            if me:
+                api_client.save_locale(telegram_id, me.get("locale", locale))
+                locale = api_client.get_locale(telegram_id)
+            accepted = await api_client.accept_invitation(telegram_id, inv_token)
+            if accepted:
+                await message.answer(t("invite.joined", locale, space=space_name))
+            else:
+                await message.answer(t("invite.accept_failed", locale))
+            return
+
+        # New user — start registration, carry the invite token
+        await state.update_data(inv_token=inv_token, inv_space=space_name)
+        await state.set_state(RegisterStates.waiting_for_name)
+        await message.answer(
+            t("invite.register_prompt", locale, space=space_name, inviter=inviter_name)
+        )
+        return
 
     # ── Flow B: deep link with link token ────────────────────────────────────
     if args:
@@ -115,7 +153,19 @@ async def process_name(message: Message, state: FSMContext) -> None:
     if tokens:
         api_client.save_token(telegram_id, tokens["access_token"])
         api_client.save_locale(telegram_id, reg_locale)
+        fsm_data = await state.get_data()
+        inv_token = fsm_data.get("inv_token")
+        inv_space = fsm_data.get("inv_space", "")
         await state.clear()
+
+        if inv_token:
+            accepted = await api_client.accept_invitation(telegram_id, inv_token)
+            if accepted:
+                await message.answer(t("invite.registered_joined", reg_locale, name=name, space=inv_space))
+            else:
+                await message.answer(t("auth.registered", reg_locale, name=name))
+            return
+
         web_token = await api_client.get_web_token(telegram_id)
         if web_token:
             url = f"{FRONTEND_URL.rstrip('/')}/api/auth/callback?token={web_token}"
