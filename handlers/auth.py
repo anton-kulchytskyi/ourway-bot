@@ -62,8 +62,11 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             await message.answer(t("invite.link_invalid", locale))
             return
 
-        space_name = inv_info.get("space_name", "")
+        org_name = inv_info.get("org_name", "")
+        space_name = inv_info.get("space_name") or ""
         inviter_name = inv_info.get("invited_by_name", "")
+        # Display name: space if present, otherwise org
+        display_name = space_name if space_name else org_name
 
         # Returning user — accept immediately
         tokens = await api_client.bot_login(telegram_id)
@@ -75,16 +78,16 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
                 locale = api_client.get_locale(telegram_id)
             accepted = await api_client.accept_invitation(telegram_id, inv_token)
             if accepted:
-                await message.answer(t("invite.joined", locale, space=space_name))
+                await message.answer(t("invite.joined", locale, space=display_name))
             else:
                 await message.answer(t("invite.accept_failed", locale))
             return
 
         # New user — start registration, carry the invite token
-        await state.update_data(inv_token=inv_token, inv_space=space_name)
+        await state.update_data(inv_token=inv_token, inv_space=display_name)
         await state.set_state(RegisterStates.waiting_for_name)
         await message.answer(
-            t("invite.register_prompt", locale, space=space_name, inviter=inviter_name)
+            t("invite.register_prompt", locale, space=display_name, inviter=inviter_name)
         )
         return
 
