@@ -21,7 +21,7 @@ TIMEZONE_ROWS = [
     ("Europe/Dublin",   "Europe/Warsaw"),
     ("Europe/Kyiv",     "Europe/Berlin"),
     ("Europe/Paris",    "Europe/Rome"),
-    ("Europe/Moscow",   "Europe/Istanbul"),
+    ("Europe/Istanbul", "Europe/Helsinki"),
     ("America/New_York","America/Los_Angeles"),
     ("Asia/Dubai",      "Asia/Kolkata"),
     ("Asia/Singapore",  "Asia/Tokyo"),

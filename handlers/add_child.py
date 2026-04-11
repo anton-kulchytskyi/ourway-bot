@@ -138,7 +138,14 @@ async def got_has_tg(callback: CallbackQuery, state: FSMContext) -> None:
             parse_mode="HTML",
         )
     else:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text=t("add_child.tg_connect_btn", locale, name=name),
+                url=invite_link or "",
+            )]
+        ])
         await callback.message.answer(
-            t("add_child.tg_created", locale, name=name, link=invite_link or ""),
+            t("add_child.tg_created", locale, name=name),
             parse_mode="HTML",
+            reply_markup=kb,
         )

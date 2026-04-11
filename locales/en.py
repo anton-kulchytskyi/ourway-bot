@@ -104,10 +104,10 @@ STRINGS: dict[str, str] = {
     ),
     "add_child.tg_created": (
         "✅ <b>{name}</b>'s account created.\n\n"
-        "Share this link with your child so they can connect their Telegram:\n\n"
-        "<code>{link}</code>\n\n"
+        "Forward the button below to your child so they can connect their Telegram.\n"
         "The link is valid for 24 hours."
     ),
+    "add_child.tg_connect_btn": "📱 Connect Telegram ({name})",
 
     # ── Daily ───────────────────────────────────────────────────────────────────
     "daily.load_today_failed": "❌ Could not load today's plan.",
