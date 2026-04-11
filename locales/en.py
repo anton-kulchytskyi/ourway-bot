@@ -162,6 +162,12 @@ STRINGS: dict[str, str] = {
     "sch.days_sat": "Sat",
     "sch.days_sun": "Sun",
 
+    # ── Timezone ────────────────────────────────────────────────────────────────
+    "tz.current": "🕐 Your current timezone: <b>{tz}</b>\n\nSelect a new one:",
+    "tz.saved": "✅ Timezone set to <b>{tz}</b>.\n\nMorning briefing and evening ritual will use this time.",
+    "tz.save_failed": "❌ Failed to save timezone. Please try again.",
+    "tz.cancel_btn": "❌ Cancel",
+
     # ── Invite ──────────────────────────────────────────────────────────────────
     "invite.link_invalid": "❌ This invitation link is invalid or has expired.\nAsk the sender to create a new one with /invite.",
     "invite.register_prompt": (
@@ -201,7 +207,8 @@ STRINGS: dict[str, str] = {
         "👨‍👩‍👧 <b>Family</b>\n"
         "/kids — children's tasks (managed + autonomy 1-2)\n"
         "/add_child — add a child (managed or with TG invite)\n"
-        "/invite — invite an adult member to a space\n\n"
+        "/invite — invite an adult member to a space\n"
+        "/timezone — view or change your timezone\n\n"
         "📁 <b>Spaces</b>\n"
         "/spaces — list and create spaces\n\n"
         "ℹ️ <b>Other</b>\n"

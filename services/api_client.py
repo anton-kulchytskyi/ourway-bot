@@ -124,6 +124,14 @@ async def get_me(telegram_id: int) -> dict | None:
     return await _request("GET", "/auth/me", headers=_auth_headers(telegram_id))
 
 
+async def update_me(telegram_id: int, **fields) -> dict | None:
+    return await _request(
+        "PATCH", "/users/me",
+        headers=_auth_headers(telegram_id),
+        json={k: v for k, v in fields.items()},
+    )
+
+
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
 async def get_my_tasks(telegram_id: int, status: str | None = None) -> list | None:
