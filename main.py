@@ -4,6 +4,7 @@ import os
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 
 from config import BOT_TOKEN
 from handlers import auth, tasks, help, daily, spaces, kids, add_child, plan, schedule_mgmt, invite, timezone
@@ -35,6 +36,19 @@ async def main():
         logger.info("Waiting %ds before polling (rolling deploy guard)...", startup_delay)
         await asyncio.sleep(startup_delay)
 
+    await bot.set_my_commands([
+        BotCommand(command="web",      description="Open OurWay web app"),
+        BotCommand(command="today",    description="My day plan"),
+        BotCommand(command="add",      description="Add a task"),
+        BotCommand(command="my",       description="My active tasks"),
+        BotCommand(command="done",     description="Mark task as done"),
+        BotCommand(command="schedule", description="View/manage schedule"),
+        BotCommand(command="plan",     description="Plan tasks for the day"),
+        BotCommand(command="kids",     description="View children"),
+        BotCommand(command="spaces",   description="My spaces"),
+        BotCommand(command="help",     description="Help"),
+        BotCommand(command="start",    description="Start / login"),
+    ])
     logger.info("Bot started")
     await dp.start_polling(bot, drop_pending_updates=True)
 

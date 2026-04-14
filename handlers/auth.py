@@ -17,7 +17,7 @@ Flow D — Invite deep link (adult member invite):
 import logging
 
 from aiogram import F, Router
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -133,6 +133,31 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     # ── Flow A: new user — start registration ────────────────────────────────
     await state.set_state(RegisterStates.waiting_for_name)
     await message.answer(t("auth.hello_new_user", locale, name=first_name))
+
+
+@router.message(Command("web"))
+async def cmd_web(message: Message) -> None:
+    """Generate a fresh web login link for the current user."""
+    telegram_id = message.from_user.id
+    locale = api_client.get_locale(telegram_id)
+
+    if not await api_client.ensure_token(telegram_id):
+        await message.answer(t("common.not_logged_in", locale))
+        return
+
+    web_token = await api_client.get_web_token(telegram_id)
+    if not web_token:
+        await message.answer(t("auth.error", locale))
+        return
+
+    url = f"{FRONTEND_URL.rstrip('/')}/api/auth/callback?token={web_token}"
+    label = "Відкрити OurWay" if locale == "uk" else "Open OurWay"
+    await message.answer(
+        label,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text=f"🌐 {label}", url=url)]]
+        ),
+    )
 
 
 @router.message(RegisterStates.waiting_for_name, F.text)
