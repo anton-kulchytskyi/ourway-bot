@@ -190,6 +190,30 @@ STRINGS: dict[str, str] = {
     "invite.open_tg_btn": "📱 Приєднатись через Telegram",
     "invite.open_web_btn": "🌐 Відкрити у браузері",
 
+    # ── Events ──────────────────────────────────────────────────────────────────
+    "event.load_failed": "❌ Не вдалось завантажити події.",
+    "event.no_events": "📅 Майбутніх подій немає.",
+    "event.list_header": "<b>Майбутні події:</b>",
+    "event.delete_btn": "🗑 Видалити",
+    "event.deleted": "🗑 Видалено: <b>{title}</b>",
+    "event.delete_failed": "❌ Не вдалось видалити подію. Спробуй ще раз.",
+    "event.pick_to_delete": "Яку подію видалити?",
+    "event.title_prompt": "📅 Назва події?",
+    "event.date_prompt": "📅 <b>{title}</b>\n\nЯка дата?",
+    "event.date_today_btn": "Сьогодні",
+    "event.date_tomorrow_btn": "Завтра",
+    "event.date_skip_btn": "Без фіксованої дати",
+    "event.date_invalid": "Невірний формат дати. Використовуй РРРР-ММ-ДД (напр. 2026-05-20):",
+    "event.time_prompt": "🕐 Час початку? (напр. 14:00)",
+    "event.time_skip_btn": "Пропустити",
+    "event.time_invalid": "Невірний формат часу. Використовуй ГГ:ХХ (напр. 14:00):",
+    "event.participants_prompt": "👥 Хто бере участь? (тапай щоб вмикати/вимикати)",
+    "event.participants_me_btn": "Я",
+    "event.participants_done_btn": "✅ Готово",
+    "event.created": "✅ Подію додано: <b>{title}</b>\n{date}{time}",
+    "event.create_failed": "❌ Не вдалось створити подію. Спробуй ще раз.",
+    "event.cancel_btn": "❌ Скасувати",
+
     # ── Help ────────────────────────────────────────────────────────────────────
     "help.text": (
         "<b>OurWay Бот — Команди</b>\n\n"
@@ -199,9 +223,11 @@ STRINGS: dict[str, str] = {
         "/done &lt;id&gt; — відмітити задачу виконаною\n"
         "/plan — запланувати задачу без дати\n"
         "/plan &lt;id&gt; — запланувати конкретну задачу\n\n"
-        "📅 <b>День</b>\n"
+        "📅 <b>День і події</b>\n"
         "/today — план на сьогодні\n"
-        "/tonight — планувати завтра (вечірній ритуал)\n\n"
+        "/tonight — планувати завтра (вечірній ритуал)\n"
+        "/events — майбутні події\n"
+        "/add_event — додати нову подію\n\n"
         "🗓 <b>Розклад</b>\n"
         "/schedule — керування постійним розкладом (школа, секції, робота)\n\n"
         "👨‍👩‍👧 <b>Сім'я</b>\n"

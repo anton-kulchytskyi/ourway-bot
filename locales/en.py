@@ -190,6 +190,30 @@ STRINGS: dict[str, str] = {
     "invite.open_tg_btn": "📱 Join via Telegram",
     "invite.open_web_btn": "🌐 Open in browser",
 
+    # ── Events ──────────────────────────────────────────────────────────────────
+    "event.load_failed": "❌ Could not load events.",
+    "event.no_events": "📅 No upcoming events.",
+    "event.list_header": "<b>Upcoming events:</b>",
+    "event.delete_btn": "🗑 Delete",
+    "event.deleted": "🗑 Deleted: <b>{title}</b>",
+    "event.delete_failed": "❌ Could not delete event. Please try again.",
+    "event.pick_to_delete": "Which event do you want to delete?",
+    "event.title_prompt": "📅 Event title?",
+    "event.date_prompt": "📅 <b>{title}</b>\n\nWhat date?",
+    "event.date_today_btn": "Today",
+    "event.date_tomorrow_btn": "Tomorrow",
+    "event.date_skip_btn": "No fixed date",
+    "event.date_invalid": "Invalid date format. Use YYYY-MM-DD (e.g. 2026-05-20):",
+    "event.time_prompt": "🕐 Start time? (e.g. 14:00)",
+    "event.time_skip_btn": "Skip",
+    "event.time_invalid": "Invalid time format. Use HH:MM (e.g. 14:00):",
+    "event.participants_prompt": "👥 Who's participating? (tap to toggle)",
+    "event.participants_me_btn": "Me",
+    "event.participants_done_btn": "✅ Done",
+    "event.created": "✅ Event added: <b>{title}</b>\n{date}{time}",
+    "event.create_failed": "❌ Could not create event. Please try again.",
+    "event.cancel_btn": "❌ Cancel",
+
     # ── Help ────────────────────────────────────────────────────────────────────
     "help.text": (
         "<b>OurWay Bot — Commands</b>\n\n"
@@ -199,9 +223,11 @@ STRINGS: dict[str, str] = {
         "/done &lt;id&gt; — mark task as done\n"
         "/plan — schedule an unscheduled task\n"
         "/plan &lt;id&gt; — schedule a specific task\n\n"
-        "📅 <b>Day</b>\n"
+        "📅 <b>Day &amp; Events</b>\n"
         "/today — your plan for today\n"
-        "/tonight — plan tomorrow (evening ritual)\n\n"
+        "/tonight — plan tomorrow (evening ritual)\n"
+        "/events — upcoming events\n"
+        "/add_event — add a new event\n\n"
         "🗓 <b>Schedule</b>\n"
         "/schedule — manage recurring schedule (school, clubs, work)\n\n"
         "👨‍👩‍👧 <b>Family</b>\n"

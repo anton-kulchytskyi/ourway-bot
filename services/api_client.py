@@ -276,3 +276,33 @@ async def get_family_day(telegram_id: int, date: str) -> list | None:
         headers=_auth_headers(telegram_id),
         params={"date": date},
     )
+
+
+# ── Events ────────────────────────────────────────────────────────────────────
+
+async def get_events(telegram_id: int, date: str | None = None) -> list | None:
+    """Return org events. Children only see events they participate in (enforced by backend)."""
+    params = {"date": date} if date else None
+    return await _request(
+        "GET", "/events",
+        headers=_auth_headers(telegram_id),
+        params=params,
+    )
+
+
+async def create_event(telegram_id: int, body: dict) -> dict | None:
+    """body: {title, date?, time_start?, time_end?, participants?}"""
+    return await _request(
+        "POST", "/events",
+        headers=_auth_headers(telegram_id),
+        json=body,
+    )
+
+
+async def delete_event(telegram_id: int, event_id: int) -> bool:
+    """Returns True on success (204), False on error."""
+    result = await _request(
+        "DELETE", f"/events/{event_id}",
+        headers=_auth_headers(telegram_id),
+    )
+    return result is not None

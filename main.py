@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 from config import BOT_TOKEN
-from handlers import auth, tasks, help, daily, spaces, kids, add_child, plan, schedule_mgmt, invite, timezone
+from handlers import auth, tasks, help, daily, spaces, kids, add_child, plan, schedule_mgmt, invite, timezone, events
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ async def main():
     dp.include_router(add_child.router)
     dp.include_router(invite.router)
     dp.include_router(timezone.router)
+    dp.include_router(events.router)
     dp.include_router(daily.router)
     dp.include_router(help.router)
 
@@ -38,7 +39,9 @@ async def main():
 
     await bot.set_my_commands([
         BotCommand(command="web",      description="Open OurWay web app"),
-        BotCommand(command="today",    description="My day plan"),
+        BotCommand(command="today",     description="My day plan"),
+        BotCommand(command="events",   description="Upcoming events"),
+        BotCommand(command="add_event",description="Add an event"),
         BotCommand(command="add",      description="Add a task"),
         BotCommand(command="my",       description="My active tasks"),
         BotCommand(command="done",     description="Mark task as done"),
