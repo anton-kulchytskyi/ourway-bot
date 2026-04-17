@@ -2,6 +2,7 @@
 Task commands: /add, /my, /done
 """
 import logging
+from datetime import date
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -23,6 +24,34 @@ STATUS_EMOJI = {
     "blocked": "🚫",
     "done": "✅",
 }
+
+_PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
+
+
+def _task_sort_key(task: dict):
+    due_str = task.get("due_date")
+    due = date.fromisoformat(due_str) if due_str else None
+    today = date.today()
+    prio = _PRIORITY_ORDER.get(task.get("priority") or "", 2)
+    if due and due < today:
+        return (0, due, prio)
+    if due and due == today:
+        return (1, date.min, prio)
+    return (2, due or date.max, prio)
+
+
+def _due_label(task: dict, locale: str) -> str:
+    due_str = task.get("due_date")
+    if not due_str:
+        return ""
+    due = date.fromisoformat(due_str)
+    today = date.today()
+    if due < today:
+        days_over = (today - due).days
+        return f"  · {t('task.overdue_label', locale).format(days=days_over)}"
+    if due == today:
+        return f"  · {t('task.due_today_label', locale)}"
+    return f"  · {due.strftime('%b %d')}"
 
 
 class AddTaskStates(StatesGroup):
@@ -214,10 +243,19 @@ async def cmd_my(message: Message) -> None:
         await message.answer(t("task.no_active", locale))
         return
 
+    active.sort(key=_task_sort_key)
+
     lines = [t("task.list_header", locale), ""]
+    today = date.today()
     for task in active:
-        emoji = STATUS_EMOJI.get(task["status"], "•")
-        lines.append(f"{emoji} #{task['id']} {task['title']}")
+        due_str = task.get("due_date")
+        due = date.fromisoformat(due_str) if due_str else None
+        if due and due <= today:
+            emoji = "🔥"
+        else:
+            emoji = STATUS_EMOJI.get(task["status"], "•")
+        label = _due_label(task, locale)
+        lines.append(f"{emoji} #{task['id']} {task['title']}{label}")
 
     lines += ["", t("task.list_footer", locale)]
     await message.answer("\n".join(lines), parse_mode="HTML")

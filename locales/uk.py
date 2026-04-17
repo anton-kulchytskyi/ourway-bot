@@ -45,6 +45,8 @@ STRINGS: dict[str, str] = {
     "task.done_usage": "Використання: /done &lt;id_задачі&gt;\nПриклад: /done 42",
     "task.done_success": "✅ Задачу #{id} виконано!",
     "task.done_failed": "❌ Не вдалось завершити задачу #{id}. Перевір ID і спробуй знову.",
+    "task.overdue_label": "прострочено {days}д",
+    "task.due_today_label": "сьогодні",
 
     # ── Task scheduling (shared by /add and /plan) ──────────────────────────────
     "sched.pick_day": "📅 На який день запланувати?",
