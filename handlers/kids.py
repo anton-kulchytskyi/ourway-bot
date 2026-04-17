@@ -73,7 +73,13 @@ async def cmd_kids(message: Message) -> None:
         else:
             for task in active:
                 emoji = STATUS_EMOJI.get(task.get("status", ""), "•")
-                lines.append(f"  {emoji} #{task['id']} {task['title']}")
+                progress_total = task.get("progress_total")
+                if progress_total:
+                    progress_current = task.get("progress_current") or 0
+                    progress = f"  · {progress_current}/{progress_total}"
+                else:
+                    progress = ""
+                lines.append(f"  {emoji} #{task['id']} {task['title']}{progress}")
 
     lines += ["", t("kids.footer", locale)]
     await message.answer("\n".join(lines), parse_mode="HTML")
