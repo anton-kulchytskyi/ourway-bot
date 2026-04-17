@@ -96,7 +96,7 @@ async def _start_plan_flow(
         await message.answer(t("sched.task_not_found", locale))
         return
 
-    await state.update_data(plan_task_id=task_id, plan_task_title=task["title"])
+    await state.update_data(plan_task_id=task_id, plan_task_title=task["title"], plan_task_status=task["status"])
     await state.set_state(PlanStates.waiting_for_day)
     await message.answer(t("sched.pick_day", locale), reply_markup=day_keyboard(locale, "plan_day"))
 
@@ -163,6 +163,8 @@ async def _apply_plan(
     fields: dict = {}
     if scheduled_date:
         fields["scheduled_date"] = scheduled_date
+        if data.get("plan_task_status") == "backlog":
+            fields["status"] = "todo"
     if due_date:
         fields["due_date"] = due_date
 

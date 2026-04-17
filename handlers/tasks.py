@@ -30,7 +30,7 @@ _PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
 def _task_sort_key(task: dict):
     due_str = task.get("due_date")
-    due = date.fromisoformat(due_str) if due_str else None
+    due = date.fromisoformat(due_str[:10]) if due_str else None
     today = date.today()
     prio = _PRIORITY_ORDER.get(task.get("priority") or "", 2)
     if due and due < today:
@@ -44,7 +44,7 @@ def _due_label(task: dict, locale: str) -> str:
     due_str = task.get("due_date")
     if not due_str:
         return ""
-    due = date.fromisoformat(due_str)
+    due = date.fromisoformat(due_str[:10])
     today = date.today()
     if due < today:
         days_over = (today - due).days
@@ -249,7 +249,7 @@ async def cmd_my(message: Message) -> None:
     today = date.today()
     for task in active:
         due_str = task.get("due_date")
-        due = date.fromisoformat(due_str) if due_str else None
+        due = date.fromisoformat(due_str[:10]) if due_str else None
         if due and due <= today:
             emoji = "🔥"
         else:
