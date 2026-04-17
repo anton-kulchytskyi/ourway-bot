@@ -39,20 +39,23 @@ async def main():
         await asyncio.sleep(startup_delay)
 
     await bot.set_my_commands([
-        BotCommand(command="web",      description="Open OurWay web app"),
         BotCommand(command="today",     description="My day plan"),
-        BotCommand(command="events",   description="Upcoming events"),
-        BotCommand(command="add_event",description="Add an event"),
-        BotCommand(command="add",      description="Add a task"),
-        BotCommand(command="my",       description="My active tasks"),
-        BotCommand(command="done",     description="Mark task as done"),
-        BotCommand(command="schedule", description="View/manage schedule"),
-        BotCommand(command="plan",     description="Plan tasks for the day"),
-        BotCommand(command="kids",     description="View children"),
-        BotCommand(command="spaces",   description="My spaces"),
-        BotCommand(command="help",     description="Help"),
-        BotCommand(command="settime",  description="Change briefing times"),
-        BotCommand(command="start",    description="Start / login"),
+        BotCommand(command="my",        description="My active tasks"),
+        BotCommand(command="add",       description="Add a task"),
+        BotCommand(command="tonight",   description="Plan tomorrow (evening ritual)"),
+        BotCommand(command="schedule",  description="View/manage schedule"),
+        BotCommand(command="done",      description="Mark task as done"),
+        BotCommand(command="plan",      description="Schedule a task from backlog"),
+        BotCommand(command="events",    description="Upcoming events"),
+        BotCommand(command="add_event", description="Add an event"),
+        BotCommand(command="kids",      description="Children's tasks"),
+        BotCommand(command="add_child", description="Add a child account"),
+        BotCommand(command="spaces",    description="My spaces"),
+        BotCommand(command="timezone",  description="View/change timezone"),
+        BotCommand(command="settime",   description="Change briefing times"),
+        BotCommand(command="web",       description="Open OurWay web app"),
+        BotCommand(command="help",      description="Help"),
+        BotCommand(command="start",     description="Start / login"),
     ])
     logger.info("Bot started")
     await dp.start_polling(bot, drop_pending_updates=True)

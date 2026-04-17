@@ -23,6 +23,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from config import FRONTEND_URL
+from keyboards import main_keyboard
 from locales import t
 from services import api_client
 
@@ -128,6 +129,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             )
         else:
             await message.answer(t("auth.welcome_back", locale, name=first_name))
+        await message.answer(t("auth.keyboard_hint", locale), reply_markup=main_keyboard())
         return
 
     # ── Flow A: new user — start registration ────────────────────────────────
@@ -203,6 +205,7 @@ async def process_name(message: Message, state: FSMContext) -> None:
             )
         else:
             await message.answer(t("auth.registered", reg_locale, name=name))
+        await message.answer(t("auth.keyboard_hint", reg_locale), reply_markup=main_keyboard())
     else:
         await state.clear()
         await message.answer(t("auth.error", locale))
