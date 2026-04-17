@@ -62,6 +62,10 @@ class AddTaskStates(StatesGroup):
     waiting_for_due_input = State()
 
 
+class ProgressUpdateStates(StatesGroup):
+    waiting_for_value = State()
+
+
 # ── /add ─────────────────────────────────────────────────────────────────────
 
 @router.message(Command("add"))
@@ -247,6 +251,7 @@ async def cmd_my(message: Message) -> None:
 
     lines = [t("task.list_header", locale), ""]
     today = date.today()
+    progress_tasks = []
     for task in active:
         due_str = task.get("due_date")
         due = date.fromisoformat(due_str[:10]) if due_str else None
@@ -255,10 +260,68 @@ async def cmd_my(message: Message) -> None:
         else:
             emoji = STATUS_EMOJI.get(task["status"], "•")
         label = _due_label(task, locale)
-        lines.append(f"{emoji} #{task['id']} {task['title']}{label}")
+        progress_total = task.get("progress_total")
+        if progress_total:
+            progress_current = task.get("progress_current") or 0
+            progress_suffix = f"  · {t('task.progress_label', locale, current=progress_current, total=progress_total)}"
+            progress_tasks.append(task)
+        else:
+            progress_suffix = ""
+        lines.append(f"{emoji} #{task['id']} {task['title']}{label}{progress_suffix}")
 
     lines += ["", t("task.list_footer", locale)]
-    await message.answer("\n".join(lines), parse_mode="HTML")
+
+    keyboard = None
+    if progress_tasks:
+        buttons = [
+            [InlineKeyboardButton(
+                text=t("task.progress_btn", locale,
+                       id=task["id"],
+                       title=task["title"][:20],
+                       current=task.get("progress_current") or 0,
+                       total=task["progress_total"]),
+                callback_data=f"progress:{task['id']}:{task['progress_total']}")]
+            for task in progress_tasks
+        ]
+        keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=keyboard)
+
+
+# ── Progress update ───────────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("progress:"))
+async def progress_start(callback: CallbackQuery, state: FSMContext) -> None:
+    _, task_id, total = callback.data.split(":")
+    locale = api_client.get_locale(callback.from_user.id)
+    await state.update_data(progress_task_id=int(task_id), progress_total=int(total))
+    await state.set_state(ProgressUpdateStates.waiting_for_value)
+    await callback.message.answer(
+        t("task.progress_prompt", locale, total=total),
+    )
+    await callback.answer()
+
+
+@router.message(ProgressUpdateStates.waiting_for_value, F.text)
+async def progress_input(message: Message, state: FSMContext) -> None:
+    telegram_id = message.from_user.id
+    locale = api_client.get_locale(telegram_id)
+    data = await state.get_data()
+    task_id = data["progress_task_id"]
+    total = data["progress_total"]
+
+    raw = (message.text or "").strip()
+    if not raw.isdigit() or not (0 <= int(raw) <= total):
+        await message.answer(t("task.progress_invalid", locale, total=total))
+        return
+
+    current = int(raw)
+    await state.clear()
+    result = await api_client.update_task(telegram_id, task_id, progress_current=current)
+    if result:
+        await message.answer(t("task.progress_saved", locale, current=current, total=total))
+    else:
+        await message.answer(t("task.progress_failed", locale))
 
 
 # ── /done ─────────────────────────────────────────────────────────────────────

@@ -18,12 +18,20 @@ STRINGS: dict[str, str] = {
     "auth.connected_start_again": "✅ Account connected! Send /start again to log in.",
     "auth.welcome_back": "👋 Welcome back, {name}!\n\nType /help to see available commands.",
     "auth.hello_new_user": (
-        "👋 Hi, {name}! Welcome to OurWay — your family planner.\n\n"
-        "Let's set up your account. What's your name?"
+        "👋 Hi {name}! You've just found OurWay — a family day planner for parents and kids.\n\n"
+        "What's your name? (this is how you'll appear to your family)"
     ),
     "auth.registered": (
         "🎉 Welcome to OurWay, {name}!\n\n"
-        "Your account is ready. Type /help to get started."
+        "OurWay helps families plan their day together — schedules, events, and tasks in one place, "
+        "built for parents and kids.\n\n"
+        "What you can do here:\n"
+        "• /today — your full day plan\n"
+        "• /add — create a task\n"
+        "• /my — your tasks\n"
+        "• /help — all commands\n\n"
+        "⚠️ One important step: open the app and set your timezone so your morning briefings "
+        "arrive at the right time 👇"
     ),
     "auth.web_login_link": (
         "🌐 Open OurWay in your browser:\n{url}\n\n"
@@ -47,6 +55,12 @@ STRINGS: dict[str, str] = {
     "task.done_failed": "❌ Could not complete task #{id}. Check the ID and try again.",
     "task.overdue_label": "overdue {days}d",
     "task.due_today_label": "today",
+    "task.progress_label": "{current}/{total}",
+    "task.progress_btn": "📊 #{id} {title} — {current}/{total}",
+    "task.progress_prompt": "How much is done now? (current value, 0–{total})",
+    "task.progress_invalid": "❌ Please enter a number between 0 and {total}.",
+    "task.progress_saved": "✅ Progress updated: {current}/{total}",
+    "task.progress_failed": "❌ Failed to update. Please try again.",
 
     # ── Task scheduling (shared by /add and /plan) ──────────────────────────────
     "sched.pick_day": "📅 Schedule for which day?",
@@ -169,6 +183,21 @@ STRINGS: dict[str, str] = {
     "tz.saved": "✅ Timezone set to <b>{tz}</b>.\n\nMorning briefing and evening ritual will use this time.",
     "tz.save_failed": "❌ Failed to save timezone. Please try again.",
     "tz.cancel_btn": "❌ Cancel",
+
+    # ── Set time ─────────────────────────────────────────────────────────────────
+    "settime.current": (
+        "⏰ <b>Notification times</b>\n\n"
+        "🌅 Morning briefing: <b>{morning}</b>\n"
+        "🌙 Evening ritual: <b>{evening}</b>\n\n"
+        "What would you like to change?"
+    ),
+    "settime.morning_btn": "🌅 Morning",
+    "settime.evening_btn": "🌙 Evening",
+    "settime.cancel_btn": "❌ Cancel",
+    "settime.enter_time": "Enter new time for {which} (format: HH:MM, e.g. 08:00):",
+    "settime.invalid_format": "❌ Invalid format. Please use HH:MM, for example: 07:30",
+    "settime.saved": "✅ {which} time set to <b>{time}</b>.",
+    "settime.save_failed": "❌ Failed to save. Please try again.",
 
     # ── Invite ──────────────────────────────────────────────────────────────────
     "invite.link_invalid": "❌ This invitation link is invalid or has expired.\nAsk the sender to create a new one with /invite.",

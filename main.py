@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 from config import BOT_TOKEN
-from handlers import auth, tasks, help, daily, spaces, kids, add_child, plan, schedule_mgmt, invite, timezone, events
+from handlers import auth, tasks, help, daily, spaces, kids, add_child, plan, schedule_mgmt, invite, timezone, events, settime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ async def main():
     dp.include_router(add_child.router)
     dp.include_router(invite.router)
     dp.include_router(timezone.router)
+    dp.include_router(settime.router)
     dp.include_router(events.router)
     dp.include_router(daily.router)
     dp.include_router(help.router)
@@ -50,6 +51,7 @@ async def main():
         BotCommand(command="kids",     description="View children"),
         BotCommand(command="spaces",   description="My spaces"),
         BotCommand(command="help",     description="Help"),
+        BotCommand(command="settime",  description="Change briefing times"),
         BotCommand(command="start",    description="Start / login"),
     ])
     logger.info("Bot started")
