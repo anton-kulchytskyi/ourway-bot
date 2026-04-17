@@ -3,6 +3,7 @@ HTTP client for ourway-backend API.
 Stores per-user JWT tokens in memory (telegram_id → token).
 """
 import logging
+import time
 from typing import Any
 
 import aiohttp
@@ -13,12 +14,18 @@ logger = logging.getLogger(__name__)
 
 # In-memory token storage: telegram_id → access_token
 _tokens: dict[int, str] = {}
+# When each token was saved (unix timestamp): telegram_id → float
+_token_saved_at: dict[int, float] = {}
 # In-memory locale cache: telegram_id → locale ("en" or "uk")
 _locales: dict[int, str] = {}
+
+# Refresh token after 20 hours (access token TTL is 1 day)
+_TOKEN_REFRESH_AFTER = 20 * 3600
 
 
 def save_token(telegram_id: int, token: str) -> None:
     _tokens[telegram_id] = token
+    _token_saved_at[telegram_id] = time.time()
 
 
 def get_token(telegram_id: int) -> str | None:
@@ -40,14 +47,19 @@ def _auth_headers(telegram_id: int) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _token_is_stale(telegram_id: int) -> bool:
+    saved_at = _token_saved_at.get(telegram_id, 0)
+    return (time.time() - saved_at) > _TOKEN_REFRESH_AFTER
+
+
 async def ensure_token(telegram_id: int) -> bool:
     """Return True if the user has a valid token.
 
-    If the token is missing (e.g. after a bot restart), try a silent bot_login.
-    This lets returning users keep using the bot without re-running /start.
+    Proactively refreshes via bot_login when token is missing or older than
+    _TOKEN_REFRESH_AFTER seconds, so expired tokens don't cause 401 errors.
     Returns False only when the user is genuinely unregistered.
     """
-    if get_token(telegram_id):
+    if get_token(telegram_id) and not _token_is_stale(telegram_id):
         return True
     result = await bot_login(telegram_id)
     if result and result.get("access_token"):
