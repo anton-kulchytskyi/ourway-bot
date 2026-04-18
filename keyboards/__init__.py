@@ -12,6 +12,7 @@ def main_keyboard() -> ReplyKeyboardMarkup:
             [
                 KeyboardButton(text="/tonight"),
                 KeyboardButton(text="/schedule"),
+                KeyboardButton(text="/web"),
             ],
         ],
         resize_keyboard=True,

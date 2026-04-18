@@ -133,7 +133,7 @@ async def get_web_token(telegram_id: int) -> str | None:
 
 
 async def get_me(telegram_id: int) -> dict | None:
-    return await _request("GET", "/auth/me", headers=_auth_headers(telegram_id))
+    return await _request("GET", "/users/me", headers=_auth_headers(telegram_id))
 
 
 async def update_me(telegram_id: int, **fields) -> dict | None:

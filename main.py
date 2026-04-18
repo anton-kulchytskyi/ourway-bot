@@ -50,6 +50,7 @@ async def main():
         BotCommand(command="add_event", description="Add an event"),
         BotCommand(command="kids",      description="Children's tasks"),
         BotCommand(command="add_child", description="Add a child account"),
+        BotCommand(command="invite",    description="Invite a family member"),
         BotCommand(command="spaces",    description="My spaces"),
         BotCommand(command="timezone",  description="View/change timezone"),
         BotCommand(command="settime",   description="Change briefing times"),
