@@ -101,9 +101,9 @@ async def cmd_schedule(message: Message) -> None:
     else:
         lines.append(t("sch.list_empty", locale))
 
-    # Children's schedules (owner only)
+    # Children's schedules (owner and member)
     me = await api_client.get_me(telegram_id)
-    if me and me.get("role") == "owner":
+    if me and me.get("role") in ("owner", "member"):
         members = await api_client.get_family_members(telegram_id) or []
         children = [m for m in members if m.get("role") == "child"]
         for child in children:
@@ -131,9 +131,9 @@ async def cb_add(callback: CallbackQuery, state: FSMContext) -> None:
     telegram_id = callback.from_user.id
     locale = api_client.get_locale(telegram_id)
 
-    # Owner with children → ask "for whom?"
+    # Owner/member with children → ask "for whom?"
     me = await api_client.get_me(telegram_id)
-    if me and me.get("role") == "owner":
+    if me and me.get("role") in ("owner", "member"):
         members = await api_client.get_family_members(telegram_id) or []
         children = [m for m in members if m.get("role") == "child"]
         if children:
@@ -184,7 +184,7 @@ async def cb_delete_list(callback: CallbackQuery) -> None:
     all_schedules = list(await api_client.get_schedules(telegram_id) or [])
 
     me = await api_client.get_me(telegram_id)
-    if me and me.get("role") == "owner":
+    if me and me.get("role") in ("owner", "member"):
         members = await api_client.get_family_members(telegram_id) or []
         children = [m for m in members if m.get("role") == "child"]
         for child in children:
