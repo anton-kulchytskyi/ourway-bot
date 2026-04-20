@@ -82,6 +82,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
                 await message.answer(t("invite.joined", locale, space=display_name))
             else:
                 await message.answer(t("invite.accept_failed", locale))
+            await message.answer(t("auth.keyboard_hint", locale), reply_markup=main_keyboard())
             return
 
         # New user — start registration, carry the invite token
@@ -108,6 +109,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
                 api_client.save_locale(telegram_id, me.get("locale", locale))
                 locale = api_client.get_locale(telegram_id)
             await message.answer(t("auth.connected_welcome", locale, name=first_name))
+            await message.answer(t("auth.keyboard_hint", locale), reply_markup=main_keyboard())
         else:
             await message.answer(t("auth.connected_start_again", locale))
         return
@@ -194,6 +196,7 @@ async def process_name(message: Message, state: FSMContext) -> None:
                 await message.answer(t("invite.registered_joined", reg_locale, name=name, space=inv_space))
             else:
                 await message.answer(t("auth.registered", reg_locale, name=name))
+            await message.answer(t("auth.keyboard_hint", reg_locale), reply_markup=main_keyboard())
             return
 
         web_token = await api_client.get_web_token(telegram_id)
