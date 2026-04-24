@@ -280,7 +280,7 @@ async def cmd_my(message: Message) -> None:
                        title=task["title"][:20],
                        current=task.get("progress_current") or 0,
                        total=task["progress_total"]),
-                callback_data=f"progress:{task['id']}:{task['progress_total']}")]
+                callback_data=f"progress:{task['id']}:{task['progress_total']}:{task.get('progress_current') or 0}")]
             for task in progress_tasks
         ]
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -292,12 +292,17 @@ async def cmd_my(message: Message) -> None:
 
 @router.callback_query(F.data.startswith("progress:"))
 async def progress_start(callback: CallbackQuery, state: FSMContext) -> None:
-    _, task_id, total = callback.data.split(":")
+    parts = callback.data.split(":")
+    _, task_id, total, current = parts[0], parts[1], parts[2], parts[3] if len(parts) > 3 else "0"
     locale = api_client.get_locale(callback.from_user.id)
-    await state.update_data(progress_task_id=int(task_id), progress_total=int(total))
+    await state.update_data(
+        progress_task_id=int(task_id),
+        progress_total=int(total),
+        progress_current=int(current),
+    )
     await state.set_state(ProgressUpdateStates.waiting_for_value)
     await callback.message.answer(
-        t("task.progress_prompt", locale, total=total),
+        t("task.progress_prompt", locale, current=current, total=total),
     )
     await callback.answer()
 
@@ -309,17 +314,19 @@ async def progress_input(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     task_id = data["progress_task_id"]
     total = data["progress_total"]
+    current = data["progress_current"]
+    max_add = total - current
 
     raw = (message.text or "").strip()
-    if not raw.isdigit() or not (0 <= int(raw) <= total):
-        await message.answer(t("task.progress_invalid", locale, total=total))
+    if not raw.isdigit() or not (1 <= int(raw) <= max_add):
+        await message.answer(t("task.progress_invalid", locale, max=max_add))
         return
 
-    current = int(raw)
+    new_current = current + int(raw)
     await state.clear()
-    result = await api_client.update_task(telegram_id, task_id, progress_current=current)
+    result = await api_client.update_task(telegram_id, task_id, progress_current=new_current)
     if result:
-        await message.answer(t("task.progress_saved", locale, current=current, total=total))
+        await message.answer(t("task.progress_saved", locale, current=new_current, total=total))
     else:
         await message.answer(t("task.progress_failed", locale))
 

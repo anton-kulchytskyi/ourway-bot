@@ -57,8 +57,8 @@ STRINGS: dict[str, str] = {
     "task.due_today_label": "сьогодні",
     "task.progress_label": "{current}/{total}",
     "task.progress_btn": "📊 #{id} {title} — {current}/{total}",
-    "task.progress_prompt": "Скільки зараз виконано? (число від 0 до {total})",
-    "task.progress_invalid": "❌ Введи число від 0 до {total}.",
+    "task.progress_prompt": "Поточний прогрес: {current}/{total}\n\nСкільки додати?",
+    "task.progress_invalid": "❌ Введи число від 1 до {max}.",
     "task.progress_saved": "✅ Прогрес оновлено: {current}/{total}",
     "task.progress_failed": "❌ Не вдалось оновити. Спробуй ще раз.",
 
