@@ -9,7 +9,7 @@ import logging
 
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from locales import t
 from services import api_client
@@ -55,6 +55,7 @@ async def cmd_kids(message: Message) -> None:
         return
 
     lines = [t("kids.header", locale)]
+    progress_buttons: list[list[InlineKeyboardButton]] = []
 
     for child in children:
         name = child["name"]
@@ -77,9 +78,18 @@ async def cmd_kids(message: Message) -> None:
                 if progress_total:
                     progress_current = task.get("progress_current") or 0
                     progress = f"  · {progress_current}/{progress_total}"
+                    progress_buttons.append([InlineKeyboardButton(
+                        text=t("task.progress_btn", locale,
+                               id=task["id"],
+                               title=f"{name[:10]}: {task['title'][:15]}",
+                               current=progress_current,
+                               total=progress_total),
+                        callback_data=f"progress:{task['id']}:{progress_total}:{progress_current}",
+                    )])
                 else:
                     progress = ""
                 lines.append(f"  {emoji} #{task['id']} {task['title']}{progress}")
 
     lines += ["", t("kids.footer", locale)]
-    await message.answer("\n".join(lines), parse_mode="HTML")
+    keyboard = InlineKeyboardMarkup(inline_keyboard=progress_buttons) if progress_buttons else None
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=keyboard)
