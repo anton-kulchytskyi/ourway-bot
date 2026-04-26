@@ -129,6 +129,14 @@ async def get_web_token(telegram_id: int) -> str | None:
     return result["token"] if result else None
 
 
+async def link_telegram(link_token: str, telegram_id: int) -> dict | None:
+    """Link a telegram_id to an existing account using the deep-link token from bot-create."""
+    return await _request(
+        "POST", "/users/telegram/link",
+        json={"token": link_token, "telegram_id": telegram_id},
+    )
+
+
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 
