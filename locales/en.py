@@ -61,6 +61,8 @@ STRINGS: dict[str, str] = {
     "task.progress_invalid": "❌ Enter a number from 1 to {max}.",
     "task.progress_saved": "✅ Progress updated: {current}/{total}",
     "task.progress_failed": "❌ Failed to update. Please try again.",
+    "task.assign_prompt": "👤 Assign to whom?",
+    "task.assign_me": "👤 Me",
 
     # ── Task scheduling (shared by /add and /plan) ──────────────────────────────
     "sched.pick_day": "📅 Schedule for which day?",

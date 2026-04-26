@@ -192,12 +192,15 @@ async def create_task(
     space_id: int,
     scheduled_date: str | None = None,
     due_date: str | None = None,
+    assignee_id: int | None = None,
 ) -> dict | None:
     body: dict = {"title": title, "space_id": space_id, "status": "todo"}
     if scheduled_date:
         body["scheduled_date"] = scheduled_date
     if due_date:
         body["due_date"] = due_date
+    if assignee_id is not None:
+        body["assignee_id"] = assignee_id
     return await _request("POST", "/tasks", headers=_auth_headers(telegram_id), json=body)
 
 

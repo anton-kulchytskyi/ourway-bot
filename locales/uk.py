@@ -61,6 +61,8 @@ STRINGS: dict[str, str] = {
     "task.progress_invalid": "❌ Введи число від 1 до {max}.",
     "task.progress_saved": "✅ Прогрес оновлено: {current}/{total}",
     "task.progress_failed": "❌ Не вдалось оновити. Спробуй ще раз.",
+    "task.assign_prompt": "👤 Для кого ця задача?",
+    "task.assign_me": "👤 Мені",
 
     # ── Task scheduling (shared by /add and /plan) ──────────────────────────────
     "sched.pick_day": "📅 На який день запланувати?",

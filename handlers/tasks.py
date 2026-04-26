@@ -60,6 +60,7 @@ class AddTaskStates(StatesGroup):
     waiting_for_day = State()
     waiting_for_due = State()
     waiting_for_due_input = State()
+    waiting_for_assignee = State()
 
 
 class ProgressUpdateStates(StatesGroup):
@@ -184,8 +185,9 @@ async def process_due_pick(callback: CallbackQuery, state: FSMContext) -> None:
 
     data = await state.get_data()
     due_date = resolve_due(value, data.get("scheduled_date"))
+    await state.update_data(due_date=due_date)
     await callback.message.delete()
-    await _create_task_final(callback.message, state, telegram_id, data, due_date)
+    await _ask_assignee(callback.message, state, telegram_id)
     await callback.answer()
 
 
@@ -199,23 +201,63 @@ async def process_due_input(message: Message, state: FSMContext) -> None:
         return
 
     data = await state.get_data()
-    await _create_task_final(message, state, telegram_id, data, due_date)
+    await state.update_data(due_date=due_date)
+    await _ask_assignee(message, state, telegram_id)
+
+
+async def _ask_assignee(message: Message, state: FSMContext, telegram_id: int) -> None:
+    locale = api_client.get_locale(telegram_id)
+    me = await api_client.get_me(telegram_id)
+    my_id = me["id"] if me else None
+    members = await api_client.get_family_members(telegram_id)
+
+    others = [m for m in (members or []) if m["id"] != my_id]
+
+    if not others:
+        data = await state.get_data()
+        await _create_task_final(message, state, telegram_id, data)
+        return
+
+    await state.set_state(AddTaskStates.waiting_for_assignee)
+    buttons = [[InlineKeyboardButton(text=t("task.assign_me", locale), callback_data="assignee:me")]]
+    for m in others:
+        emoji = "🧒" if m.get("role") == "child" else "👤"
+        buttons.append([InlineKeyboardButton(
+            text=f"{emoji} {m['name']}",
+            callback_data=f"assignee:{m['id']}",
+        )])
+    await message.answer(t("task.assign_prompt", locale), reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+
+@router.callback_query(AddTaskStates.waiting_for_assignee, F.data.startswith("assignee:"))
+async def process_assignee_pick(callback: CallbackQuery, state: FSMContext) -> None:
+    value = callback.data.split(":", 1)[1]
+    telegram_id = callback.from_user.id
+    await callback.message.delete()
+    assignee_id = None if value == "me" else int(value)
+    await state.update_data(assignee_id=assignee_id)
+    data = await state.get_data()
+    await _create_task_final(callback.message, state, telegram_id, data)
+    await callback.answer()
 
 
 async def _create_task_final(
     message: Message, state: FSMContext,
-    telegram_id: int, data: dict, due_date: str | None,
+    telegram_id: int, data: dict,
 ) -> None:
     locale = api_client.get_locale(telegram_id)
     title = data["task_title"]
     space_id = data["space_id"]
     space_name = data["space_name"]
     scheduled_date = data.get("scheduled_date")
+    due_date = data.get("due_date")
+    assignee_id = data.get("assignee_id")
 
     task = await api_client.create_task(
         telegram_id, title, space_id,
         scheduled_date=scheduled_date,
         due_date=due_date,
+        assignee_id=assignee_id,
     )
     await state.clear()
     if task:
