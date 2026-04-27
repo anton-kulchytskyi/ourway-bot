@@ -5,6 +5,7 @@ STRINGS: dict[str, str] = {
     "common.not_logged_in": "Please send /start first to log in.",
     "common.min_2_chars": "Please enter at least 2 characters.",
     "common.cancelled": "Cancelled.",
+    "common.unknown_command": "I didn't understand that. Use /help to see available commands.",
 
     # ── Auth ────────────────────────────────────────────────────────────────────
     "auth.link_invalid": (

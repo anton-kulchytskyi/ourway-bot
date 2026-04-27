@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 from config import BOT_TOKEN
-from handlers import auth, tasks, help, daily, spaces, kids, add_child, plan, schedule_mgmt, invite, timezone, events, settime
+from handlers import auth, tasks, help, daily, spaces, kids, add_child, plan, schedule_mgmt, invite, timezone, events, settime, fallback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,6 +30,8 @@ async def main():
     dp.include_router(events.router)
     dp.include_router(daily.router)
     dp.include_router(help.router)
+    dp.include_router(fallback.router)   # must be last — catch-all
+    dp.errors.register(fallback.error_handler)
 
     # Brief delay so Railway can stop the previous instance before we start polling.
     # Without this, rolling deploy causes a TelegramConflictError for ~1s.
