@@ -375,6 +375,23 @@ async def progress_input(message: Message, state: FSMContext) -> None:
 
 # ── /done ─────────────────────────────────────────────────────────────────────
 
+async def _do_complete_task(message: Message, telegram_id: int, task_id: int, locale: str) -> None:
+    """Complete a task — or request parent approval if the user is a child."""
+    role = api_client.get_role(telegram_id)
+    if role == "child":
+        result = await api_client.request_task_done(telegram_id, task_id)
+        if result:
+            await message.answer(t("task.done_requested", locale))
+        else:
+            await message.answer(t("task.done_failed", locale, id=str(task_id)))
+    else:
+        result = await api_client.complete_task(telegram_id, task_id)
+        if result:
+            await message.answer(t("task.done_success", locale, id=str(task_id)))
+        else:
+            await message.answer(t("task.done_failed", locale, id=str(task_id)))
+
+
 @router.message(Command("done"))
 async def cmd_done(message: Message) -> None:
     telegram_id = message.from_user.id
@@ -383,14 +400,81 @@ async def cmd_done(message: Message) -> None:
         return
 
     locale = api_client.get_locale(telegram_id)
+
+    # Support /done <id> for quick direct completion
     args = message.text.split(maxsplit=1)[1].strip() if " " in message.text else ""
-    if not args or not args.isdigit():
-        await message.answer(t("task.done_usage", locale))
+    if args and args.isdigit():
+        await _do_complete_task(message, telegram_id, int(args), locale)
         return
 
-    task_id = int(args)
+    # Show task picker with inline buttons
+    tasks = await api_client.get_my_tasks(telegram_id)
+    if tasks is None:
+        await message.answer(t("task.load_failed", locale))
+        return
+
+    active = [task for task in tasks if task["status"] != "done"]
+    if not active:
+        await message.answer(t("task.no_active", locale))
+        return
+
+    active.sort(key=_task_sort_key)
+    buttons = [
+        [InlineKeyboardButton(
+            text=f"{STATUS_EMOJI.get(task['status'], '•')} {task['title'][:32]}",
+            callback_data=f"done_pick:{task['id']}",
+        )]
+        for task in active[:10]
+    ]
+    await message.answer(
+        t("task.done_pick_prompt", locale),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+    )
+
+
+@router.callback_query(F.data.startswith("done_pick:"))
+async def done_pick_callback(callback: CallbackQuery) -> None:
+    task_id = int(callback.data.split(":")[1])
+    telegram_id = callback.from_user.id
+    locale = api_client.get_locale(telegram_id)
+    await callback.message.delete()
+    await _do_complete_task(callback.message, telegram_id, task_id, locale)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("task_approve:"))
+async def task_approve_callback(callback: CallbackQuery) -> None:
+    parts = callback.data.split(":")
+    task_id = int(parts[1])
+    child_tg_id = int(parts[2])
+    telegram_id = callback.from_user.id
+    locale = api_client.get_locale(telegram_id)
+
     result = await api_client.complete_task(telegram_id, task_id)
     if result:
-        await message.answer(t("task.done_success", locale, id=str(task_id)))
+        await callback.message.edit_text(t("task.done_approved_parent", locale, id=str(task_id)))
+        child_locale = api_client.get_locale(child_tg_id)
+        await callback.bot.send_message(
+            chat_id=child_tg_id,
+            text=t("task.done_approved_child", child_locale),
+        )
     else:
-        await message.answer(t("task.done_failed", locale, id=str(task_id)))
+        await callback.message.edit_text(t("task.done_approve_failed", locale))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("task_reject:"))
+async def task_reject_callback(callback: CallbackQuery) -> None:
+    parts = callback.data.split(":")
+    task_id = int(parts[1])
+    child_tg_id = int(parts[2])
+    telegram_id = callback.from_user.id
+    locale = api_client.get_locale(telegram_id)
+
+    await callback.message.edit_text(t("task.done_rejected_parent", locale, id=str(task_id)))
+    child_locale = api_client.get_locale(child_tg_id)
+    await callback.bot.send_message(
+        chat_id=child_tg_id,
+        text=t("task.done_rejected_child", child_locale),
+    )
+    await callback.answer()

@@ -76,6 +76,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             me = await api_client.get_me(telegram_id)
             if me:
                 api_client.save_locale(telegram_id, me.get("locale", locale))
+                api_client.save_role(telegram_id, me.get("role", "member"))
                 locale = api_client.get_locale(telegram_id)
             accepted = await api_client.accept_invitation(telegram_id, inv_token)
             if accepted:
@@ -107,6 +108,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             me = await api_client.get_me(telegram_id)
             if me:
                 api_client.save_locale(telegram_id, me.get("locale", locale))
+                api_client.save_role(telegram_id, me.get("role", "member"))
                 locale = api_client.get_locale(telegram_id)
             await message.answer(t("auth.connected_welcome", locale, name=first_name))
             await message.answer(t("auth.keyboard_hint", locale), reply_markup=main_keyboard())
@@ -121,6 +123,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         me = await api_client.get_me(telegram_id)
         if me:
             api_client.save_locale(telegram_id, me.get("locale", locale))
+            api_client.save_role(telegram_id, me.get("role", "member"))
             locale = api_client.get_locale(telegram_id)
         web_token = await api_client.get_web_token(telegram_id)
         if web_token:

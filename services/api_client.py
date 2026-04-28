@@ -18,6 +18,8 @@ _tokens: dict[int, str] = {}
 _token_saved_at: dict[int, float] = {}
 # In-memory locale cache: telegram_id → locale ("en" or "uk")
 _locales: dict[int, str] = {}
+# In-memory role cache: telegram_id → role ("owner" | "member" | "child")
+_roles: dict[int, str] = {}
 
 # Refresh token after 20 hours (access token TTL is 1 day)
 _TOKEN_REFRESH_AFTER = 20 * 3600
@@ -38,6 +40,14 @@ def save_locale(telegram_id: int, locale: str) -> None:
 
 def get_locale(telegram_id: int) -> str:
     return _locales.get(telegram_id, "en")
+
+
+def save_role(telegram_id: int, role: str) -> None:
+    _roles[telegram_id] = role
+
+
+def get_role(telegram_id: int) -> str | None:
+    return _roles.get(telegram_id)
 
 
 def _auth_headers(telegram_id: int) -> dict[str, str]:
@@ -64,11 +74,12 @@ async def ensure_token(telegram_id: int) -> bool:
     result = await bot_login(telegram_id)
     if result and result.get("access_token"):
         save_token(telegram_id, result["access_token"])
-        # Restore locale from backend if not cached
-        if telegram_id not in _locales:
+        # Restore locale and role from backend if not cached
+        if telegram_id not in _locales or telegram_id not in _roles:
             me = await get_me(telegram_id)
             if me:
                 save_locale(telegram_id, me.get("locale", "en"))
+                save_role(telegram_id, me.get("role", "member"))
         return True
     return False
 
@@ -209,6 +220,14 @@ async def complete_task(telegram_id: int, task_id: int) -> dict | None:
         "PATCH", f"/tasks/{task_id}",
         headers=_auth_headers(telegram_id),
         json={"status": "done"},
+    )
+
+
+async def request_task_done(telegram_id: int, task_id: int) -> dict | None:
+    """Child requests parent approval to mark task as done."""
+    return await _request(
+        "POST", f"/tasks/{task_id}/request_done",
+        headers=_auth_headers(telegram_id),
     )
 
 
