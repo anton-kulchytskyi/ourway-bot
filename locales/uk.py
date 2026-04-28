@@ -103,6 +103,15 @@ STRINGS: dict[str, str] = {
     "space.created": "✅ Простір створено: {emoji} <b>{name}</b>\n\nТепер можна додавати задачі через /add",
     "space.create_failed": "❌ Не вдалось створити простір. Спробуй ще раз.",
 
+    "space.tasks_btn": "📋 Задачі",
+    "space.tasks_header": "<b>{emoji} {name} — задачі:</b>",
+    "space.tasks_empty": "Активних задач у цьому просторі немає.",
+    "space.tasks_load_failed": "❌ Не вдалось завантажити задачі простору.",
+    "space.status_in_progress": "🔄 В процесі",
+    "space.status_todo": "📌 Todo",
+    "space.status_blocked": "🚧 Заблоковано",
+    "space.status_backlog": "📦 Беклог",
+
     # ── Kids ────────────────────────────────────────────────────────────────────
     "kids.load_failed": "❌ Не вдалось завантажити членів сім'ї.",
     "kids.no_children": "В твоїй сім'ї ще немає дітей.\n\nВикористай /add_child щоб додати.",

@@ -36,16 +36,20 @@ async def cmd_spaces(message: Message) -> None:
         await message.answer(t("space.load_failed", locale))
         return
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
-            text=t("space.create_new_btn", locale),
-            callback_data="create_space",
-        ),
-    ]])
+    create_row = [InlineKeyboardButton(text=t("space.create_new_btn", locale), callback_data="create_space")]
 
     if not spaces:
-        await message.answer(t("space.no_spaces", locale), reply_markup=keyboard)
+        await message.answer(t("space.no_spaces", locale), reply_markup=InlineKeyboardMarkup(inline_keyboard=[create_row]))
         return
+
+    rows = []
+    for s in spaces:
+        emoji = s.get("emoji") or "📁"
+        rows.append([InlineKeyboardButton(
+            text=f"{emoji} {s['name']}  {t('space.tasks_btn', locale)}",
+            callback_data=f"space_tasks:{s['id']}",
+        )])
+    rows.append(create_row)
 
     lines = [t("space.list_header", locale), ""]
     for s in spaces:
@@ -55,8 +59,62 @@ async def cmd_spaces(message: Message) -> None:
     await message.answer(
         "\n".join(lines),
         parse_mode="HTML",
-        reply_markup=keyboard,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
     )
+
+
+@router.callback_query(F.data.startswith("space_tasks:"))
+async def cb_space_tasks(callback: CallbackQuery) -> None:
+    await callback.answer()
+    telegram_id = callback.from_user.id
+    locale = api_client.get_locale(telegram_id)
+
+    space_id = int(callback.data.split(":")[1])
+
+    spaces = await api_client.get_spaces(telegram_id)
+    space = next((s for s in spaces if s["id"] == space_id), None) if spaces else None
+
+    tasks = await api_client.get_space_tasks(telegram_id, space_id)
+    if tasks is None:
+        await callback.message.answer(t("space.tasks_load_failed", locale))
+        return
+
+    active = [tk for tk in tasks if tk["status"] != "done"]
+    if not active:
+        await callback.message.answer(t("space.tasks_empty", locale))
+        return
+
+    # Build assignee name map: fetch family members + self
+    members = await api_client.get_family_members(telegram_id) or []
+    me = await api_client.get_me(telegram_id)
+    name_map: dict[int, str] = {m["id"]: m["name"] for m in members}
+    if me:
+        name_map[me["id"]] = me["name"]
+
+    STATUS_ORDER = ["in_progress", "todo", "blocked", "backlog"]
+    STATUS_LABEL = {
+        "in_progress": t("space.status_in_progress", locale),
+        "todo": t("space.status_todo", locale),
+        "blocked": t("space.status_blocked", locale),
+        "backlog": t("space.status_backlog", locale),
+    }
+
+    emoji = (space.get("emoji") or "📁") if space else "📁"
+    name = space["name"] if space else f"#{space_id}"
+    lines = [t("space.tasks_header", locale, emoji=emoji, name=name), ""]
+
+    for status in STATUS_ORDER:
+        group = [tk for tk in active if tk["status"] == status]
+        if not group:
+            continue
+        lines.append(STATUS_LABEL[status])
+        for tk in group:
+            assignee_id = tk.get("assignee_id")
+            assignee = f" — 👤 {name_map[assignee_id]}" if assignee_id and assignee_id in name_map else ""
+            lines.append(f"  • {tk['title']}{assignee}")
+        lines.append("")
+
+    await callback.message.answer("\n".join(lines).strip(), parse_mode="HTML")
 
 
 # ── Create space flow ─────────────────────────────────────────────────────────

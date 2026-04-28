@@ -244,6 +244,14 @@ async def get_spaces(telegram_id: int) -> list | None:
     return await _request("GET", "/spaces", headers=_auth_headers(telegram_id))
 
 
+async def get_space_tasks(telegram_id: int, space_id: int) -> list | None:
+    return await _request(
+        "GET", "/tasks",
+        headers=_auth_headers(telegram_id),
+        params={"space_id": space_id},
+    )
+
+
 async def create_invitation(telegram_id: int, space_id: int | None = None, role: str = "editor") -> dict | None:
     body: dict = {"role": role}
     if space_id is not None:

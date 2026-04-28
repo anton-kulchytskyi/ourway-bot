@@ -103,6 +103,15 @@ STRINGS: dict[str, str] = {
     "space.created": "✅ Space created: {emoji} <b>{name}</b>\n\nNow you can add tasks with /add",
     "space.create_failed": "❌ Failed to create space. Please try again.",
 
+    "space.tasks_btn": "📋 Tasks",
+    "space.tasks_header": "<b>{emoji} {name} — tasks:</b>",
+    "space.tasks_empty": "No active tasks in this space.",
+    "space.tasks_load_failed": "❌ Failed to load tasks for this space.",
+    "space.status_in_progress": "🔄 In Progress",
+    "space.status_todo": "📌 Todo",
+    "space.status_blocked": "🚧 Blocked",
+    "space.status_backlog": "📦 Backlog",
+
     # ── Kids ────────────────────────────────────────────────────────────────────
     "kids.load_failed": "❌ Could not load family members.",
     "kids.no_children": "No children in your family yet.\n\nUse /add_child to add one.",
