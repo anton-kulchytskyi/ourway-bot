@@ -15,6 +15,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from handlers.scheduling_helpers import time_hour_keyboard, time_minute_keyboard
 from locales import t
 from services import api_client
 
@@ -70,8 +71,54 @@ async def settime_pick(callback: CallbackQuery, state: FSMContext) -> None:
 
     await state.update_data(settime_type=value)
     await state.set_state(SetTimeFSM.waiting_for_time)
-    label = t("settime.morning_btn", locale) if value == "morning" else t("settime.evening_btn", locale)
-    await callback.message.answer(t("settime.enter_time", locale, which=label))
+    await callback.message.answer(
+        t("time.hour_prompt", locale),
+        reply_markup=time_hour_keyboard(locale, "sth_h"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(SetTimeFSM.waiting_for_time, F.data.startswith("sth_h:"))
+async def settime_hour_pick(callback: CallbackQuery, state: FSMContext) -> None:
+    value = callback.data.split(":", 1)[1]
+    locale = api_client.get_locale(callback.from_user.id)
+
+    if value == "back":
+        await callback.message.edit_text(
+            t("time.hour_prompt", locale),
+            reply_markup=time_hour_keyboard(locale, "sth_h"),
+        )
+        await callback.answer()
+        return
+
+    hour = int(value)
+    await callback.message.edit_text(
+        t("time.minute_prompt", locale, hour=f"{hour:02d}"),
+        reply_markup=time_minute_keyboard(hour, locale, "sth_m", "sth_h"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(SetTimeFSM.waiting_for_time, F.data.startswith("sth_m:"))
+async def settime_minute_pick(callback: CallbackQuery, state: FSMContext) -> None:
+    _, h, m = callback.data.split(":")
+    time_str = f"{int(h):02d}:{int(m):02d}"
+    telegram_id = callback.from_user.id
+    locale = api_client.get_locale(telegram_id)
+    data = await state.get_data()
+    which = data.get("settime_type", "morning")
+    await state.clear()
+    await callback.message.delete()
+
+    field = "morning_brief_time" if which == "morning" else "evening_ritual_time"
+    result = await api_client.update_me(telegram_id, **{field: time_str})
+    if result is None:
+        await callback.message.answer(t("settime.save_failed", locale))
+        await callback.answer()
+        return
+
+    label = t("settime.morning_btn", locale) if which == "morning" else t("settime.evening_btn", locale)
+    await callback.message.answer(t("settime.saved", locale, which=label, time=time_str))
     await callback.answer()
 
 

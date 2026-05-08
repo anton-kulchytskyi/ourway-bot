@@ -15,6 +15,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from handlers.scheduling_helpers import time_hour_keyboard, time_minute_keyboard
 from locales import t
 from services import api_client
 
@@ -264,7 +265,10 @@ async def fsm_toggle_day(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.message.delete()
         await state.update_data(sch_days=sorted(selected))
         await state.set_state(ScheduleAddFSM.time_start)
-        await callback.message.answer(t("sch.time_start_prompt", locale))
+        await callback.message.answer(
+            t("sch.time_start_prompt", locale),
+            reply_markup=time_hour_keyboard(locale, "sch_tsh"),
+        )
         await callback.answer()
         return
 
@@ -282,6 +286,48 @@ async def fsm_toggle_day(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
 
 
+async def _ask_time_end(message: Message, state: FSMContext, locale: str) -> None:
+    await state.set_state(ScheduleAddFSM.time_end)
+    await message.answer(
+        t("sch.time_end_prompt", locale),
+        reply_markup=time_hour_keyboard(locale, "sch_teh", skip_data="sch_time_end:skip"),
+    )
+
+
+# ── Time start: hour/minute callbacks ─────────────────────────────────────────
+
+@router.callback_query(ScheduleAddFSM.time_start, F.data.startswith("sch_tsh:"))
+async def fsm_time_start_hour(callback: CallbackQuery, state: FSMContext) -> None:
+    value = callback.data.split(":", 1)[1]
+    locale = api_client.get_locale(callback.from_user.id)
+
+    if value == "back":
+        await callback.message.edit_text(
+            t("sch.time_start_prompt", locale),
+            reply_markup=time_hour_keyboard(locale, "sch_tsh"),
+        )
+        await callback.answer()
+        return
+
+    hour = int(value)
+    await callback.message.edit_text(
+        t("time.minute_prompt", locale, hour=f"{hour:02d}"),
+        reply_markup=time_minute_keyboard(hour, locale, "sch_tsm", "sch_tsh"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(ScheduleAddFSM.time_start, F.data.startswith("sch_tsm:"))
+async def fsm_time_start_minute(callback: CallbackQuery, state: FSMContext) -> None:
+    _, h, m = callback.data.split(":")
+    time_str = f"{int(h):02d}:{int(m):02d}"
+    locale = api_client.get_locale(callback.from_user.id)
+    await state.update_data(sch_time_start=time_str)
+    await callback.message.delete()
+    await _ask_time_end(callback.message, state, locale)
+    await callback.answer()
+
+
 @router.message(ScheduleAddFSM.time_start, F.text)
 async def fsm_time_start(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
@@ -293,11 +339,40 @@ async def fsm_time_start(message: Message, state: FSMContext) -> None:
         return
 
     await state.update_data(sch_time_start=_normalise_time(time_str))
-    await state.set_state(ScheduleAddFSM.time_end)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=t("sch.time_skip_btn", locale), callback_data="sch_time_end:skip"),
-    ]])
-    await message.answer(t("sch.time_end_prompt", locale), reply_markup=keyboard)
+    await _ask_time_end(message, state, locale)
+
+
+# ── Time end: hour/minute callbacks ───────────────────────────────────────────
+
+@router.callback_query(ScheduleAddFSM.time_end, F.data.startswith("sch_teh:"))
+async def fsm_time_end_hour(callback: CallbackQuery, state: FSMContext) -> None:
+    value = callback.data.split(":", 1)[1]
+    locale = api_client.get_locale(callback.from_user.id)
+
+    if value == "back":
+        await callback.message.edit_text(
+            t("sch.time_end_prompt", locale),
+            reply_markup=time_hour_keyboard(locale, "sch_teh", skip_data="sch_time_end:skip"),
+        )
+        await callback.answer()
+        return
+
+    hour = int(value)
+    await callback.message.edit_text(
+        t("time.minute_prompt", locale, hour=f"{hour:02d}"),
+        reply_markup=time_minute_keyboard(hour, locale, "sch_tem", "sch_teh", skip_data="sch_time_end:skip"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(ScheduleAddFSM.time_end, F.data.startswith("sch_tem:"))
+async def fsm_time_end_minute(callback: CallbackQuery, state: FSMContext) -> None:
+    _, h, m = callback.data.split(":")
+    time_str = f"{int(h):02d}:{int(m):02d}"
+    await state.update_data(sch_time_end=time_str)
+    await callback.message.delete()
+    await _ask_valid_from(callback.message, state, callback.from_user.id)
+    await callback.answer()
 
 
 @router.callback_query(ScheduleAddFSM.time_end, F.data == "sch_time_end:skip")

@@ -174,8 +174,8 @@ STRINGS: dict[str, str] = {
     "sch.days_prompt": "🗓 Select weekdays (tap to toggle, then ✅ Done):",
     "sch.days_done_btn": "✅ Done",
     "sch.days_none_selected": "Select at least one day.",
-    "sch.time_start_prompt": "🕐 Start time? (e.g. 08:00)",
-    "sch.time_end_prompt": "🕑 End time? (e.g. 14:00) or skip:",
+    "sch.time_start_prompt": "🕐 Start time?",
+    "sch.time_end_prompt": "🕑 End time?",
     "sch.time_skip_btn": "Skip",
     "sch.time_invalid": "Invalid time format. Use HH:MM (e.g. 08:00):",
     "sch.valid_from_prompt": "📅 Valid from? (e.g. 2026-09-01) or:",
@@ -240,6 +240,12 @@ STRINGS: dict[str, str] = {
     "invite.open_tg_btn": "📱 Join via Telegram",
     "invite.open_web_btn": "🌐 Open in browser",
 
+    # ── Time picker ─────────────────────────────────────────────────────────────
+    "time.hour_prompt": "🕐 Select hour:",
+    "time.minute_prompt": "🕐 {hour}:__ → pick minutes:",
+    "time.back_btn": "← Back",
+    "time.skip_btn": "Skip",
+
     # ── Events ──────────────────────────────────────────────────────────────────
     "event.load_failed": "❌ Could not load events.",
     "event.no_events": "📅 No upcoming events.",
@@ -252,9 +258,10 @@ STRINGS: dict[str, str] = {
     "event.date_prompt": "📅 <b>{title}</b>\n\nWhat date?",
     "event.date_today_btn": "Today",
     "event.date_tomorrow_btn": "Tomorrow",
-    "event.date_skip_btn": "No fixed date",
-    "event.date_invalid": "Invalid date format. Use YYYY-MM-DD (e.g. 2026-05-20):",
-    "event.time_prompt": "🕐 Start time? (e.g. 14:00)",
+    "event.date_other_btn": "📅 Other date...",
+    "event.date_other_hint": "Enter date — DD.MM, DD.MM.YYYY or YYYY-MM-DD:",
+    "event.date_invalid": "Invalid format. Try: 20.05 or 20.05.2026 or 2026-05-20",
+    "event.time_prompt": "🕐 Start time?",
     "event.time_skip_btn": "Skip",
     "event.time_invalid": "Invalid time format. Use HH:MM (e.g. 14:00):",
     "event.participants_prompt": "👥 Who's participating? (tap to toggle)",

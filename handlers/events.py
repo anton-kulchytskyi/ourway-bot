@@ -11,6 +11,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from handlers.scheduling_helpers import parse_event_date, time_hour_keyboard, time_minute_keyboard
 from locales import t
 from services import api_client
 
@@ -98,7 +99,6 @@ async def cmd_events(message: Message) -> None:
         await message.answer(t("event.load_failed", locale))
         return
 
-    # Show only upcoming (date >= today or date is None)
     today = date.today().isoformat()
     upcoming = [e for e in events if not e.get("date") or e["date"] >= today]
     upcoming.sort(key=lambda e: (e.get("date") is None, e.get("date") or ""))
@@ -187,7 +187,6 @@ async def cmd_add_event(message: Message, state: FSMContext) -> None:
 
     locale = api_client.get_locale(telegram_id)
 
-    # Children cannot create events (backend enforces this too)
     me = await api_client.get_me(telegram_id)
     if me and me.get("role") == "child":
         await message.answer(t("event.load_failed", locale))
@@ -226,8 +225,8 @@ async def fsm_title(message: Message, state: FSMContext) -> None:
         ],
         [
             InlineKeyboardButton(
-                text=t("event.date_skip_btn", locale),
-                callback_data="ev_date:skip",
+                text=t("event.date_other_btn", locale),
+                callback_data="ev_date:other",
             ),
         ],
         [
@@ -250,6 +249,13 @@ async def fsm_date_btn(callback: CallbackQuery, state: FSMContext) -> None:
     value = callback.data.split(":", 1)[1]
     locale = api_client.get_locale(callback.from_user.id)
 
+    if value == "other":
+        await callback.message.delete()
+        await callback.message.answer(t("event.date_other_hint", locale))
+        # stay in EventAddFSM.date — text handler below will catch the typed date
+        return
+
+    # legacy "skip" — kept for in-flight sessions
     await state.update_data(ev_date=None if value == "skip" else value)
     await callback.message.delete()
     await _ask_time(callback.message, state, callback.from_user.id, locale)
@@ -259,28 +265,53 @@ async def fsm_date_btn(callback: CallbackQuery, state: FSMContext) -> None:
 async def fsm_date_text(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
     locale = api_client.get_locale(telegram_id)
-    try:
-        parsed = date.fromisoformat(message.text.strip())
-        await state.update_data(ev_date=parsed.isoformat())
-    except ValueError:
+    parsed = parse_event_date(message.text)
+    if parsed is None:
         await message.answer(t("event.date_invalid", locale))
         return
+    await state.update_data(ev_date=parsed.isoformat())
     await _ask_time(message, state, telegram_id, locale)
 
 
+# ── Time picker ───────────────────────────────────────────────────────────────
+
 async def _ask_time(message: Message, state: FSMContext, telegram_id: int, locale: str) -> None:
     await state.set_state(EventAddFSM.time)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text=t("event.time_skip_btn", locale),
-            callback_data="ev_time:skip",
-        )],
-        [InlineKeyboardButton(
-            text=t("event.cancel_btn", locale),
-            callback_data="ev_cancel",
-        )],
-    ])
-    await message.answer(t("event.time_prompt", locale), reply_markup=keyboard)
+    await message.answer(
+        t("event.time_prompt", locale),
+        reply_markup=time_hour_keyboard(locale, "ev_th", skip_data="ev_time:skip"),
+    )
+
+
+@router.callback_query(EventAddFSM.time, F.data.startswith("ev_th:"))
+async def fsm_time_hour(callback: CallbackQuery, state: FSMContext) -> None:
+    value = callback.data.split(":", 1)[1]
+    locale = api_client.get_locale(callback.from_user.id)
+
+    if value == "back":
+        await callback.message.edit_text(
+            t("event.time_prompt", locale),
+            reply_markup=time_hour_keyboard(locale, "ev_th", skip_data="ev_time:skip"),
+        )
+        await callback.answer()
+        return
+
+    hour = int(value)
+    await callback.message.edit_text(
+        t("time.minute_prompt", locale, hour=f"{hour:02d}"),
+        reply_markup=time_minute_keyboard(hour, locale, "ev_tm", "ev_th", skip_data="ev_time:skip"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(EventAddFSM.time, F.data.startswith("ev_tm:"))
+async def fsm_time_minute(callback: CallbackQuery, state: FSMContext) -> None:
+    _, h, m = callback.data.split(":")
+    time_str = f"{int(h):02d}:{int(m):02d}"
+    await state.update_data(ev_time=time_str)
+    await callback.message.delete()
+    await _ask_participants(callback.message, state, callback.from_user.id)
+    await callback.answer()
 
 
 @router.callback_query(EventAddFSM.time, F.data == "ev_time:skip")
@@ -305,6 +336,8 @@ async def fsm_time_text(message: Message, state: FSMContext) -> None:
     await _ask_participants(message, state, telegram_id)
 
 
+# ── Participants ──────────────────────────────────────────────────────────────
+
 async def _ask_participants(message: Message, state: FSMContext, telegram_id: int) -> None:
     locale = api_client.get_locale(telegram_id)
 
@@ -312,11 +345,9 @@ async def _ask_participants(message: Message, state: FSMContext, telegram_id: in
     my_id = me["id"] if me else 0
 
     members_raw = await api_client.get_family_members(telegram_id) or []
-    # Include self + all family members
     members = [{"id": my_id, "name": "me"}] + [
         m for m in members_raw if m["id"] != my_id
     ]
-    # Start with self pre-selected
     selected = {my_id}
 
     await state.update_data(ev_members=members, ev_my_id=my_id, ev_participants=list(selected))

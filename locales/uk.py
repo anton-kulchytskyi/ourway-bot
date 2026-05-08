@@ -174,8 +174,8 @@ STRINGS: dict[str, str] = {
     "sch.days_prompt": "🗓 Вибери дні тижня (тапай щоб вмикати/вимикати, потім ✅ Готово):",
     "sch.days_done_btn": "✅ Готово",
     "sch.days_none_selected": "Вибери хоча б один день.",
-    "sch.time_start_prompt": "🕐 Час початку? (напр. 08:00)",
-    "sch.time_end_prompt": "🕑 Час кінця? (напр. 14:00) або пропустити:",
+    "sch.time_start_prompt": "🕐 Час початку?",
+    "sch.time_end_prompt": "🕑 Час кінця?",
     "sch.time_skip_btn": "Пропустити",
     "sch.time_invalid": "Невірний формат часу. Використовуй ГГ:ХХ (напр. 08:00):",
     "sch.valid_from_prompt": "📅 Діє з? (напр. 2026-09-01) або:",
@@ -240,6 +240,12 @@ STRINGS: dict[str, str] = {
     "invite.open_tg_btn": "📱 Приєднатись через Telegram",
     "invite.open_web_btn": "🌐 Відкрити у браузері",
 
+    # ── Time picker ─────────────────────────────────────────────────────────────
+    "time.hour_prompt": "🕐 Вибери годину:",
+    "time.minute_prompt": "🕐 {hour}:__ → вибери хвилини:",
+    "time.back_btn": "← Назад",
+    "time.skip_btn": "Пропустити",
+
     # ── Events ──────────────────────────────────────────────────────────────────
     "event.load_failed": "❌ Не вдалось завантажити події.",
     "event.no_events": "📅 Майбутніх подій немає.",
@@ -252,9 +258,10 @@ STRINGS: dict[str, str] = {
     "event.date_prompt": "📅 <b>{title}</b>\n\nЯка дата?",
     "event.date_today_btn": "Сьогодні",
     "event.date_tomorrow_btn": "Завтра",
-    "event.date_skip_btn": "Без фіксованої дати",
-    "event.date_invalid": "Невірний формат дати. Використовуй РРРР-ММ-ДД (напр. 2026-05-20):",
-    "event.time_prompt": "🕐 Час початку? (напр. 14:00)",
+    "event.date_other_btn": "📅 Інша дата...",
+    "event.date_other_hint": "Введи дату — ДД.ММ, ДД.ММ.РРРР або РРРР-ММ-ДД:",
+    "event.date_invalid": "Невірний формат. Спробуй: 20.05 або 20.05.2026 або 2026-05-20",
+    "event.time_prompt": "🕐 Час початку?",
     "event.time_skip_btn": "Пропустити",
     "event.time_invalid": "Невірний формат часу. Використовуй ГГ:ХХ (напр. 14:00):",
     "event.participants_prompt": "👥 Хто бере участь? (тапай щоб вмикати/вимикати)",
