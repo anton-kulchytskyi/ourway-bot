@@ -24,6 +24,7 @@ class EventAddFSM(StatesGroup):
     date = State()
     time = State()
     participants = State()
+    reminder = State()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -336,6 +337,21 @@ async def fsm_time_text(message: Message, state: FSMContext) -> None:
     await _ask_participants(message, state, telegram_id)
 
 
+# ── Reminder ─────────────────────────────────────────────────────────────────
+
+def _reminder_keyboard(locale: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=t("event.remind_15_btn", locale), callback_data="ev_remind:15"),
+            InlineKeyboardButton(text=t("event.remind_30_btn", locale), callback_data="ev_remind:30"),
+            InlineKeyboardButton(text=t("event.remind_60_btn", locale), callback_data="ev_remind:60"),
+        ],
+        [
+            InlineKeyboardButton(text=t("event.remind_skip_btn", locale), callback_data="ev_remind:skip"),
+        ],
+    ])
+
+
 # ── Participants ──────────────────────────────────────────────────────────────
 
 async def _ask_participants(message: Message, state: FSMContext, telegram_id: int) -> None:
@@ -369,7 +385,7 @@ async def fsm_toggle_participant(callback: CallbackQuery, state: FSMContext) -> 
     if value == "done":
         await callback.answer()
         await callback.message.delete()
-        await _finish_event(callback.message, state, telegram_id)
+        await _ask_reminder(callback.message, state, telegram_id)
         return
 
     uid = int(value)
@@ -389,6 +405,27 @@ async def fsm_toggle_participant(callback: CallbackQuery, state: FSMContext) -> 
     await callback.answer()
 
 
+async def _ask_reminder(message: Message, state: FSMContext, telegram_id: int) -> None:
+    locale = api_client.get_locale(telegram_id)
+    await state.set_state(EventAddFSM.reminder)
+    await message.answer(
+        t("event.remind_prompt", locale),
+        reply_markup=_reminder_keyboard(locale),
+    )
+
+
+@router.callback_query(EventAddFSM.reminder, F.data.startswith("ev_remind:"))
+async def fsm_reminder(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer()
+    value = callback.data.split(":", 1)[1]
+    telegram_id = callback.from_user.id
+
+    remind_before_min = None if value == "skip" else int(value)
+    await state.update_data(ev_remind_before_min=remind_before_min)
+    await callback.message.delete()
+    await _finish_event(callback.message, state, telegram_id)
+
+
 async def _finish_event(message: Message, state: FSMContext, telegram_id: int) -> None:
     locale = api_client.get_locale(telegram_id)
     data = await state.get_data()
@@ -399,6 +436,7 @@ async def _finish_event(message: Message, state: FSMContext, telegram_id: int) -
         "date": data.get("ev_date"),
         "time_start": data.get("ev_time"),
         "participants": data.get("ev_participants", []),
+        "remind_before_min": data.get("ev_remind_before_min"),
     }
 
     result = await api_client.create_event(telegram_id, body)
